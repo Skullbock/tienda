@@ -15,7 +15,17 @@ class TiendaSelect extends DSCSelect
 {
 	
 	/* bootstrapped yes/no */
-	
+	//TODO add documentation to this function
+	/**
+	 * 
+	 * @param unknown $name
+	 * @param string $attribs
+	 * @param string $selected
+	 * @param string $yes
+	 * @param string $no
+	 * @param string $id
+	 * @return string
+	 */
 	public static function btbooleanlist($name, $attribs = null, $selected = null, $yes = 'JYES', $no = 'JNO', $id = false)
 	{
 	
@@ -30,6 +40,20 @@ class TiendaSelect extends DSCSelect
 		return $html;
 	}
 	
+	
+	//TODO add documentation to this function
+	/**
+	 * 
+	 * @param unknown $data
+	 * @param unknown $name
+	 * @param string $attribs
+	 * @param string $optKey
+	 * @param string $optText
+	 * @param string $selected
+	 * @param string $idtag
+	 * @param string $translate
+	 * @return string
+	 */
 	public static function btradiolist($data, $name, $attribs = null, $optKey = 'value', $optText = 'text', $selected = null, $idtag = false,
 		$translate = false)
 	{
