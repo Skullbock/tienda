@@ -1209,7 +1209,7 @@
     	</copy>
 
         <!-- NetSuite CSV Importer -->
-        <copy todir="${destdir}/plugins/${cfg.comName}" preservelastmodified="true" overwrite="true">
+        <copy todir="${destdir}/plugins/${cfg.comName}/tool_netsuitecsvimporter" preservelastmodified="true" overwrite="true">
             <fileset dir="${cfg.aux}/tienda_plugin_tool_netsuitecsvimporter" />
         </copy>
         <copy todir="${destdir}/administrator/language/en-GB" preservelastmodified="true" overwrite="true">

@@ -14,19 +14,12 @@ defined('_JEXEC') or die('Restricted access');
 Tienda::load('TiendaToolPlugin', 'library.plugins.tool');
 
 class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
+	
 	/**
 	 * @var $_element  string  Should always correspond with the plugin's filename,
 	 *                         forcing it to be unique
 	 */
 	var $_element = 'tool_netsuitecsvimporter';
-
-	/**
-	 *
-	 * @var $_keys	array	Contains the columns names
-	 */
-	var $_keys = array();
-
-	var $_uploaded_file = '';
 
 	function __construct(&$subject, $config) {
 		parent::__construct($subject, $config);
@@ -34,7 +27,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$language -> load('plg_tienda_' . $this -> _element, JPATH_ADMINISTRATOR, 'en-GB', true);
 		$language -> load('plg_tienda_' . $this -> _element, JPATH_ADMINISTRATOR, null, true);
 
-		$this -> _keys = array('product_id', 'product_name', 'product_categories', 'manufacturer_id', 'product_description_short', 'product_description', 'product_full_image', 'product_images', 'product_ships', 'product_height', 'product_width', 'product_length', 'product_weight', 'product_price', 'product_quantity', 'product_attributes', 'product_sku', 'product_model', 'product_listprice', 'product_listprice_enabled', );
+		$this->checkInstallation();
 	}
 
 	/**
@@ -627,5 +620,50 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			return FALSE;
 		}
 	}
+
+	/**
+	 * Adds required xref table to the db on first installation
+	 */
+	private function checkInstallation()
+    {
+        // if this has already been done, don't repeat
+        if (Tienda::getInstance()->get('checkTableNetsuiteImporter', '0'))
+        {
+            return true;
+        }
+        
+        $sql = "CREATE TABLE `#__tienda_netsuiteproductsxref` (
+			  `netsuite_id` int(11) NOT NULL,
+			  `product_id` int(11) NOT NULL,
+			  PRIMARY KEY (`netsuite_id`,`product_id`),
+			  KEY `netsuite_id` (`netsuite_id`),
+			  KEY `product_id` (`product_id`),
+			  KEY `netsuite_id_2` (`netsuite_id`,`product_id`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+							
+        $db = JFactory::getDBO();
+        $db->setQuery($sql);
+        $result = $db->query();
+
+        $sql = "ALTER TABLE `#__tienda_netsuiteproductsxref`
+			  ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
+
+        $db->setQuery($sql);
+        $result_2 = $db->query();
+
+        if ($result && $result_2)
+        {
+            // Update config to say this has been done already
+            JTable::addIncludePath( JPATH_ADMINISTRATOR.'/components/com_tienda/tables' );
+            $config = JTable::getInstance( 'Config', 'TiendaTable' );
+            $config->load( array( 'config_name'=>'checkTableNetsuiteImporter') );
+            $config->config_name = 'checkTableNetsuiteImporter';
+            $config->value = '1';
+            $config->save();
+            return true;
+        }
+
+        return false;        
+    }
 
 }
