@@ -281,6 +281,7 @@
  	
     	<!--Tool Plugins-->
     	<zip destfile="${cfg.buildDir}/plugins_aux/${cfg.plgPrefix}tool_genericimporter.zip" basedir="${cfg.aux}/${cfg.plgPrefix}tool_genericimporter" />
+        <zip destfile="${cfg.buildDir}/plugins_aux/${cfg.plgPrefix}tool_netsuitecsvimporter.zip" basedir="${cfg.aux}/${cfg.plgPrefix}tool_netsuitecsvimporter" />
   		
     </target>
 	
@@ -1206,6 +1207,14 @@
     	<copy todir="${destdir}/administrator/language/en-GB" preservelastmodified="true" overwrite="true">
     		<fileset dir="${cfg.aux}/tienda_plugin_award_ambrapoints/languages" />
     	</copy>
+
+        <!-- NetSuite CSV Importer -->
+        <copy todir="${destdir}/plugins/${cfg.comName}" preservelastmodified="true" overwrite="true">
+            <fileset dir="${cfg.aux}/tienda_plugin_tool_netsuitecsvimporter" />
+        </copy>
+        <copy todir="${destdir}/administrator/language/en-GB" preservelastmodified="true" overwrite="true">
+            <fileset dir="${cfg.aux}/tienda_plugin_tool_netsuitecsvimporter/languages" />
+        </copy>
     	
     	<!-- APPS -->
     	 <!-- Example: <copy todir="${destdir}" preservelastmodified="true" overwrite="true">

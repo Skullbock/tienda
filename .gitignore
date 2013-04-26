@@ -1,5 +1,6 @@
 .project
 .settings/
+packages
 
 antconfig.txt
 
@@ -7,4 +8,4 @@ antconfig.txt
 
 tienda/site/controllers/amritasingh.sublime-project
 
-*.sublime-workspace
+*.sublime-*
