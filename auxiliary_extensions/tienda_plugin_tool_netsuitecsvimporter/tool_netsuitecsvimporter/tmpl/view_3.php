@@ -1,65 +1,52 @@
 <?php defined('_JEXEC') or die('Restricted access'); ?>
-<?php $items = @$vars->results; ?>
 
 <p><?php echo JText::_('COM_TIENDA_THIS_TOOL_IMPORTS_DATA_FROM_A_CSV_FILE_TO_TIENDA'); ?></p>
 
-    <div class="note">
-        <span style="float: right; font-size: large; font-weight: bold;"><?php echo JText::_('COM_TIENDA_FINAL'); ?></span>
-        <p><?php echo JText::_('COM_TIENDA_MIGRATION_RESULTS'); ?></p>
+   <div class="note" id="netsuite-import-status">
+    Importing <span id="netsuite-import-progress">0</span> of <?php echo @$vars->total_records; ?>
+    <div class="progress">
+      <div class="bar" id="netsuite-progress-bar" style="width: 0%;"></div>
     </div>
+   </div>
 
-    <table class="adminlist" style="clear: both;">
-        <thead>
-            <tr>
-                <th style="width: 5px;">
-                    <?php echo JText::_('COM_TIENDA_NUM'); ?>
-                </th>
-                <th style="text-align: left;">
-                    <?php echo JText::_('COM_TIENDA_TITLE'); ?>
-                </th>
-                <th style="width: 50px;">
-                    <?php echo JText::_('COM_TIENDA_AFFECTED_ROWS'); ?>
-                </th>
-                <th>
-                    <?php echo JText::_('COM_TIENDA_ERRORS'); ?>
-                </th>
-            </tr>
-        </thead>
-        <tfoot>
-            <tr>
-                <td colspan="20">
+<script type="text/javascript">
+tiendaJQ(document).ready(function($){
+    var form = $('form.adminform');
+    $('[name="task"]', form).val('view');
+    var url = 'index.php?option=com_tienda&controller=tools&task=doTaskAjax&element=tool_netsuitecsvimporter.tienda&elementTask=ajaxImport&format=raw'
+    
 
-                </td>
-            </tr>
-        </tfoot>
-        <tbody>
-        <?php $i=0; $k=0; ?>
-        <?php foreach (@$items as $item) : ?>
-            <tr class='row<?php echo $k; ?>'>
-                <td align="center">
-                    <?php echo $i + 1; ?>
-                </td>
-                <td style="text-align: left;">
-                        <?php echo JText::_($item->title); ?>
-                </td>
-                <td style="text-align: center;">
-                    <?php echo $item->affectedRows; ?>
-                </td>
-                <td style="text-align: center;">
-                    <?php echo $item->error ? $item->error : "-"; ?>
-                </td>
-            </tr>
-            <?php ++$i; $k = (1 - $k); ?>
-            <?php endforeach; ?>
+    var done = 0;
+    function migrate(start) {
+        if (!start) {
+            start = 0;
+        }
+        var total = <?php echo @$vars->total_records; ?>;
+        $.ajax({
+            url: url,
+            type: 'POST',
+            dataType: 'json',
+            data: {
+                uploaded_file: '<?php echo @$vars->state->uploaded_file; ?>',
+                start: start,
+                limit: 25,
+                skip_first: <?php echo @$vars->state->skip_first; ?>,
+                total: total
+            },
+            success: function(data) {
+                var processed = parseInt(data.msg);
+                done = done + processed;
+                $('#netsuite-import-progress').html(done);
+                $('#netsuite-progress-bar').css({width: (done * 100 / total)+'%'})
+                if (done >= total) {
+                    $('#netsuite-import-status').html('Import finished');
+                } else {
+                   migrate(done);
+                }
+            }
+        });
+    }
 
-            <?php if (!count(@$items)) : ?>
-            <tr>
-                <td colspan="10" align="center">
-                    <?php echo JText::_('COM_TIENDA_NO_ITEMS_FOUND'); ?>
-                </td>
-            </tr>
-            <?php endif; ?>
-        </tbody>
-    </table>
-
-
+    migrate(0);
+});
+</script>

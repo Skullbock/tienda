@@ -71,6 +71,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return $html;
 	}
 
+
+
 	/**
 	 * Validates the data submitted based on the suffix provided
 	 *
@@ -82,12 +84,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 		switch($suffix) {
 			case"2" :
-				if (!$verify = $this -> _verifyDB()) {
-					JError::raiseNotice('_verifyDB', $this -> getError());
+				if (!$this->loadFile()) {
+					JError::raiseNotice('loadFile', $this -> getError());
 					$html .= $this -> _renderForm('1');
 				} else {
 					// migrate the data and output the results
-					$html .= $this -> _doMigration($verify);
+					$html .= $this -> doMigration();
 				}
 				break;
 			case"1" :
@@ -190,7 +192,6 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		// File already uploaded
 		else {
 			$this->uploaded_file = $upload -> full_path = $upload -> file_path = @$state -> uploaded_file;
-			$upload -> proper_name = TiendaFile::getProperName(@$state -> uploaded_file);
 			$success = true;
 		}
 
@@ -222,6 +223,20 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	protected function getPreview() 
 	{
 		return $this->getRows(0, 10);
+	}
+
+	public function ajaxImport()
+	{
+		$state = $this->_getState();
+		$start = JRequest::getVar('start', 0);
+		$total = JRequest::getVar('total', false);
+		$limit = JRequest::getVar('limit', 25);
+
+		$records = $this->getRows($start, $limit);
+
+		$processed = count($records);
+
+		return $processed;
 	}
 
 	protected function getRows($start = 0, $limit = 25 )
@@ -299,21 +314,15 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	 *
 	 * @return html
 	 */
-	function _doMigration($data) {
+	protected function doMigration() {
 		$html = "";
 		$vars = new JObject();
 
 		// perform the data migration
 		// grab all the data and insert it into the tienda tables
 		$state = $this -> _getState();
-
-		if (@$state -> skip_first) {
-			$header = array_shift($data);
-		}
-		// Insert the data in the fields
-		$results = $this -> _migrate($data);
-
-		$vars -> results = $results;
+		$vars -> total_records = $this->getTotalRecords();
+		$vars -> state = $this -> _getState();
 
 		$suffix = $this -> _getTokenSuffix();
 		$suffix++;

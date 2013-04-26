@@ -24,18 +24,6 @@
                     
                     </td>
                 </tr>
-               
-                <tr>
-                    <td width="100" align="right" class="key">
-                        <?php echo JText::_('COM_TIENDA_FIELD_SEPARATOR'); ?>: *
-                    </td>
-                    <td>
-                        <input type="text" name="field_separator" id="field_separator" size="5" maxlength="5" value="<?php echo @$state->field_separator; ?>" />
-                    </td>
-                    <td>
-                    
-                    </td>
-                </tr>
                 <tr>
                     <td width="100" align="right" class="key">
                         <?php echo JText::_('COM_TIENDA_SKIP_FIRST_ROW'); ?>?:
