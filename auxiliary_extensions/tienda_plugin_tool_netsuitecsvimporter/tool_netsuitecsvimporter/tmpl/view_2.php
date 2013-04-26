@@ -1,6 +1,6 @@
 <?php defined('_JEXEC') or die('Restricted access'); ?>
 <?php $preview = @$vars->preview; ?>
-<?php $header = array_shift($preview); ?>
+<?php $header = @$vars->header; ?>
 
 <div class="note_green">
 	<table>

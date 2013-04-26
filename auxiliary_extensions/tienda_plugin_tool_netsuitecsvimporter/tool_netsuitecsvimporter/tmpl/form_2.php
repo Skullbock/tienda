@@ -25,31 +25,6 @@
                     
                     </td>
                 </tr>
-               
-                <tr>
-                    <td width="100" align="right" class="key">
-                        <?php echo JText::_('COM_TIENDA_FIELD_SEPARATOR'); ?>: *
-                    </td>
-                    <td>
-                    	<?php echo @$state->field_separator; ?>
-                        <input type="hidden" name="field_separator" id="field_separator" size="5" maxlength="5" value="<?php echo @$state->field_separator; ?>" />
-                    </td>
-                    <td>
-                    
-                    </td>
-                </tr>
-                <tr>
-                    <td width="100" align="right" class="key">
-                        <?php echo JText::_('COM_TIENDA_SUBFIELD_SEPARATOR'); ?>: *
-                    </td>
-                    <td>
-                    	<?php echo @$state->subfield_separator; ?>
-                        <input type="hidden" name="subfield_separator" id="subfield_separator" size="5" maxlength="5" value="<?php echo @$state->subfield_separator; ?>" />
-                    </td>
-                    <td>
-                    
-                    </td>
-                </tr>
                 <tr>
                     <td width="100" align="right" class="key">
                         <?php echo JText::_('COM_TIENDA_SKIP_FIRST_ROW'); ?>?:
@@ -57,6 +32,18 @@
                     <td>
                     	<?php if(@$state->skip_first) echo JText::_('COM_TIENDA_YES'); else echo JText::_('COM_TIENDA_NO') ; ?>
                         <input type="hidden" name="skip_first" id="skip_first" value="<?php echo @$state->skip_first; ?>" />
+                    </td>
+                    <td>
+                    
+                    </td>
+                </tr>
+                  <tr>
+                    <td width="100" align="right" class="key">
+                        <?php echo JText::_('Total Records') ; ?>?:
+                    </td>
+                    <td>
+                        <?php echo @$vars->total_records; ?>
+                        <input type="hidden" name="total_records" id="total_records" value="<?php echo @$vars->total_records; ?>" />
                     </td>
                     <td>
                     

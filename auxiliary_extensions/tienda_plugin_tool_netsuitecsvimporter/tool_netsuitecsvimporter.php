@@ -40,8 +40,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'dimensions',
 		'color',
 		'size'
-
-	):
+	);
 
 	function __construct(&$subject, $config) {
 		parent::__construct($subject, $config);
@@ -92,22 +91,22 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 				}
 				break;
 			case"1" :
-				if (!$verify = $this -> _verifyDB()) {
-					JError::raiseNotice('_verifyDB', $this -> getError());
+				if (!$this->loadFile()) {
+					JError::raiseNotice('loadFile', $this -> getError());
 					$html .= $this -> _renderForm('1');
 				} else {
 					$suffix++;
 
 					$vars = new JObject();
-					$vars -> preview = $verify;
+					$vars -> header = $this->columns;
+					$vars -> preview = $this->getPreview();
 					$vars -> state = $this -> _getState();
-					$vars -> state -> uploaded_file = $this -> _uploaded_file;
+					$vars -> total_records = $this -> getTotalRecords();
 					$vars -> setError($this -> getError());
 
 					// display a 'connection verified' message
 					// and request confirmation before migrating data
 					$html .= $this -> _renderForm($suffix, $vars);
-
 					$html .= $this -> _renderView($suffix, $vars);
 				}
 				break;
@@ -155,7 +154,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	/*
 	 * Verifies the CSV file (our DB in this case)
 	 */
-	function _verifyDB() {
+	function loadFile() {
 		$state = $this -> _getState();
 
 		// Uploads the file
@@ -182,7 +181,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 					return false;
 				}
 
-				$upload -> file_path = $upload -> getFullPath();
+				$this->uploaded_file = $upload -> file_path = $upload -> getFullPath();
 			} else {
 				$this -> setError(JText::_('COM_TIENDA_COULD_NOT_UPLOAD_CSV_FILE' . $upload -> getError()));
 				return false;
@@ -190,87 +189,72 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		}
 		// File already uploaded
 		else {
-			$upload -> full_path = $upload -> file_path = @$state -> uploaded_file;
+			$this->uploaded_file = $upload -> full_path = $upload -> file_path = @$state -> uploaded_file;
 			$upload -> proper_name = TiendaFile::getProperName(@$state -> uploaded_file);
 			$success = true;
 		}
 
-		if ($success) {
-			// Get the file content
-			$upload -> fileToText();
-			$content = $upload -> fileastext;
+		return $success;
+	}
 
-			// Set the uploaded file as the file to use during the real import
-			$this -> _uploaded_file = $upload -> getFullPath();
+	protected function getTotalRecords()
+	{
+		$state = $this -> _getState();
+		$file = fopen($state->uploaded_file,'rb');
 
-			$rows = explode("\n", $content);
+		if (!$file) {
+			$this->setError('COM_TIENDA_COULD_NOT_READ_CSV_FILE');
+			return false;
+		}
+		
+		// Let's save RAM. Don't dump the entire csv into memory, but load by row and count the rows
+		$lines = 0;
+		while (fgets($file) !== false) $lines++;
+		fclose($file);
 
-			if (!count($rows)) {
-				$this -> setError('No Rows in this file');
-				return false;
-			}
+		if (@$state->skip_first) {
+			$lines--;
+		}
 
-			$records = array();
+		return $lines;
+	}
 
-			if (@$state -> skip_first) {
-				$header = array_shift($rows);
-				$header = explode(@$state -> field_separator, $header);
-			} else {
-				$header = $this -> _keys;
-			}
+	protected function getPreview() 
+	{
+		return $this->getRows(0, 10);
+	}
 
-			$records[] = $header;
+	protected function getRows($start = 0, $limit = 25 )
+	{
+		$state = $this->_getState();
 
-			// Get the records
-			foreach ($rows as $row) {
-				// Get the columns
-				$fields = explode(@$state -> field_separator, $row);
-				if ($fields) {
-					// Map them using an associative array
-					$fields = $this -> _mapFields($fields);
+		if (@$state->skip_first) {
+			$start++;
+		}
 
-					// explore possible multiple subfields
+		$file = fopen($state->uploaded_file,'rb');
 
-					// Categories
-					$fields['product_categories'] = explode(@$state -> subfield_separator, $fields['product_categories']);
-
-					// Images
-					$fields['product_images'] = explode(@$state -> subfield_separator, $fields['product_images']);
-
-					// Attributes
-					$attributes = explode(@$state -> subfield_separator, $fields['product_attributes']);
-
-					// Explode the Attribute options!
-					$real_attributes = array();
-					foreach ($attributes as $attribute) {
-						// size:s|m|l|sx
-						$att = explode(":", $attribute);
-
-						$att_name = $att[0];
-
-						$att_options = array();
-						if (!empty($att[1])) {
-							$att_options = explode("|", $att[1]);
-						}
-						$real_attributes[$att_name] = $att_options;
-					}
-
-					// Assign the parsed version!
-					$fields['product_attributes'] = $real_attributes;
-
-					$records[] = $fields;
-
-				}
-			}
-
-			return $records;
-
-		} else {
-			$this -> setError(JText::_('COM_TIENDA_COULD_NOT_UPLOAD_CSV_FILE' . $upload -> getError()));
+		if (!$file) {
+			$this->setError('COM_TIENDA_COULD_NOT_READ_CSV_FILE');
 			return false;
 		}
 
-		return false;
+		// Skip lines
+		$i = 0;
+		while ($i < $start &&  fgets($file) !== false) {$i++;}
+
+		// Read the right lines
+		$i = 0;
+		$records = array();
+		while (($line = fgets($file)) !== false && $i < $limit) {
+			$record = fgetcsv($file);
+			$records[] = $this->_mapFields($record);
+			$i++;
+		}
+
+		fclose($file);
+
+		return $records;
 	}
 
 	/**
@@ -280,14 +264,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	 * @param array $fields
 	 */
 	function _mapFields($fields) {
-		$mapped = array();
-		$i = 0;
-		foreach ($this->_keys as $key) {
-			$mapped[$key] = @$fields[$i];
-			$i++;
+		$record = array();
+		foreach ($this->columns as $k => $c) {
+			$record[$c] = $fields[$k];
 		}
 
-		return $mapped;
+		return $fields;
 	}
 
 	/**
@@ -298,18 +280,17 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	function _getState() {
 		$state = new JObject();
 		$state -> file = '';
-		$state -> uploaded_file = '';
-		$state -> field_separator = ';';
-		$state -> subfield_separator = ',';
+		$state -> uploaded_file = isset($this->uploaded_file) ? $this->uploaded_file : '';
 		$state -> skip_first = 0;
 
 		foreach ($state->getProperties() as $key => $value) {
 			$new_value = JRequest::getVar($key);
-			$value_exists = array_key_exists($key, $_POST);
+			$value_exists = array_key_exists($key, JRequest::get('post'));
 			if ($value_exists && !empty($key)) {
 				$state -> $key = $new_value;
 			}
 		}
+
 		return $state;
 	}
 

@@ -38,17 +38,6 @@
                 </tr>
                 <tr>
                     <td width="100" align="right" class="key">
-                        <?php echo JText::_('COM_TIENDA_SUBFIELD_SEPARATOR'); ?>: *
-                    </td>
-                    <td>
-                        <input type="text" name="subfield_separator" id="subfield_separator" size="5" maxlength="5" value="<?php echo @$state->subfield_separator; ?>" />
-                    </td>
-                    <td>
-                    
-                    </td>
-                </tr>
-                <tr>
-                    <td width="100" align="right" class="key">
                         <?php echo JText::_('COM_TIENDA_SKIP_FIRST_ROW'); ?>?:
                     </td>
                     <td>
