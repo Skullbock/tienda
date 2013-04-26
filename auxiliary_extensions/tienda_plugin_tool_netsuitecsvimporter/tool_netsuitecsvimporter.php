@@ -234,9 +234,180 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 		$records = $this->getRows($start, $limit);
 
+		$this->import($records);
+		
+		foreach ($records as $record) {
+			$record = new DSCParameter($record);
+			$record = $this->mapTiendaFields($record);
+		}
+
 		$processed = count($records);
 
 		return $processed;
+	}
+
+
+	protected function mapTiendaFields($record) 
+	{
+		$data = array();
+
+		$data['product_name'] 		= $record->get('display_name', $record->get('name', ''));
+		$data['category']			= $record->get('category', '');
+		$data['product_price'] 		= $record->get('price', 0);
+		$data['product_quantity'] 	= $record->get('quantity', 0);
+		$data['product_full_image']	= $record->get('image');
+
+		return $data;
+	}
+
+
+	protected function import($records)
+	{
+		// Loop though the rows
+		foreach ($records as $record) {
+
+			$record = new DSCParameter($record);
+
+			// First: Netsuite ID check. It was already imported?
+			$netsuite_id = $record->get('netsuite_id', false);
+			
+			JTable::addIncludePath(JPATH_ADMINISTRATOR . DS . 'components' . DS . 'com_tienda' . DS . 'tables');
+			JTable::addIncludePath(dirname(__FILE__) . DS . $this->_element . DS . 'tables');
+
+			$txref = JTable::getInstance('Netsuiteproducts', 'TiendaTable');
+			$xref = $txref->load(array('netsuite_id' => $netsuite_id));
+
+			$product = JTable::getInstance('Products', 'TiendaTable');
+			
+			$isNew = true;
+
+			// Update!
+			if (isset($xref->product_id)) {
+				$product_id = $xref->product_id;
+				$isNew = false;
+			}
+
+			$data = $this->mapTiendaFields($record);
+
+			// If is a new product, use product->create()
+			if ($isNew) {
+				$product -> product_price = 0;
+				$product -> product_quantity = 0;
+				$product -> bind($data);
+				$product -> create();
+
+				//$this -> _migrateAttributes($product -> product_id, $data['product_attributes']);
+			}
+			// else use the save() method
+			else {
+				$product->load($product_id);
+				$product -> bind($data);
+
+				//check if normal price exists
+				Tienda::load("TiendaHelperProduct", 'helpers.product');
+				$prices = TiendaHelperProduct::getPrices($product -> product_id);
+				$quantities = TiendaHelperProduct::getProductQuantities($product -> product_id);
+
+				if ($product -> save()) {
+					$product -> product_id = $product -> id;
+
+					// New price?
+					if (empty($prices)) {
+						// set price if new or no prices set
+						$price = JTable::getInstance('Productprices', 'TiendaTable');
+						$price -> product_id = $product -> id;
+						$price -> product_price = $data['product_price'];
+						$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
+						$price -> save();
+					}
+					// Overwrite price
+					else {
+						// set price if new or no prices set
+						$price = JTable::getInstance('Productprices', 'TiendaTable');
+						$price -> load($prices[0] -> product_price_id);
+						$price -> product_price = $data['product_price'];
+						$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
+						$price -> save();
+					}
+
+					// New quantity?
+					if (empty($quantities)) {
+						// save default quantity
+						$quantity = JTable::getInstance('Productquantities', 'TiendaTable');
+						$quantity -> product_id = $product -> id;
+						$quantity -> quantity = $data['product_quantity'];
+						$quantity -> save();
+					}
+					// Overwrite Quantity
+					else {
+						// save default quantity
+						$quantity = JTable::getInstance('Productquantities', 'TiendaTable');
+						$quantity -> load($quantities[0] -> productquantity_id);
+						$quantity -> product_id = $product -> id;
+						$quantity -> quantity = $data['product_quantity'];
+						$quantity -> save();
+					}
+
+				}
+
+				// at this point, the product is saved, so now do additional relationships
+
+				// such as categories
+				if (!empty($product -> product_id) && !empty($data['product_categories'])) {
+					foreach ($data['product_categories'] as $category_id) {
+						// This is probably not the best way to do it
+						// Numeric = id, string = category name
+						if (!is_numeric($category_id)) {
+							// check for existance
+							JModel::addIncludePath(JPATH_ADMINISTRATOR . DS . 'components' . DS . 'com_tienda' . DS . 'models');
+							$model = JModel::getInstance('Categories', 'TiendaModel');
+							$model -> setState('filter_name', $category_id);
+							$matches = $model -> getList();
+							$matched = false;
+
+							if ($matches) {
+								foreach ($matches as $match) {
+									// is a perfect match?
+									if (strtolower($category_id) == strtolower($match -> category_name)) {
+										$category_id = $match -> category_id;
+										$matched = true;
+									}
+								}
+							}
+
+							// Not matched, create category
+							if (!$matched) {
+								$category = JTable::getInstance('Categories', 'TiendaTable');
+								$category -> category_name = $category_id;
+								$category -> parent_id = 1;
+								$category -> category_enabled = 1;
+								$category -> save();
+
+								$category_id = $category -> category_id;
+							}
+
+						}
+
+						// save xref in every case
+						$xref = JTable::getInstance('ProductCategories', 'TiendaTable');
+						$xref -> product_id = $product -> product_id;
+						$xref -> category_id = $category_id;
+						$xref -> save();
+					}
+				}
+
+				$results[$n] -> title = $product -> product_name;
+				$results[$n] -> query = "";
+				$results[$n] -> error = implode('\n', $product -> getErrors());
+				$results[$n] -> affectedRows = 1;
+
+				$n++;
+
+				//$this -> _migrateImages($product -> product_id, $data['product_images'], $results);
+
+			}
+
+		}
 	}
 
 	protected function getRows($start = 0, $limit = 25 )
@@ -261,8 +432,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		// Read the right lines
 		$i = 0;
 		$records = array();
-		while (($line = fgets($file)) !== false && $i < $limit) {
-			$record = fgetcsv($file);
+		while (($record = fgetcsv($file)) !== false && $i < $limit) {
 			$records[] = $this->_mapFields($record);
 			$i++;
 		}
@@ -284,7 +454,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$record[$c] = $fields[$k];
 		}
 
-		return $fields;
+		return $record;
 	}
 
 	/**
