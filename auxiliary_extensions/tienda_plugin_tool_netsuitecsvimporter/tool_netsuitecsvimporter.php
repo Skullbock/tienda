@@ -21,6 +21,28 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	 */
 	var $_element = 'tool_netsuitecsvimporter';
 
+	protected $columns = array(
+		'netsuite_id',
+		'name',
+		'display_name',
+		'category',
+		'parent_category',
+		'parent',
+		'type',
+		'price',
+		'quantity',
+		'image',
+		'currency',
+		'description',
+		'other_image',
+		'necklace_closure',
+		'earring_closure',
+		'dimensions',
+		'color',
+		'size'
+
+	):
+
 	function __construct(&$subject, $config) {
 		parent::__construct($subject, $config);
 		$language = JFactory::getLanguage();
