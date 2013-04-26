@@ -252,12 +252,77 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$data = array();
 
 		$data['product_name'] 		= $record->get('display_name', $record->get('name', ''));
-		$data['category']			= $record->get('category', '');
+		$data['product_category']	= array($this->getCategory($record));
 		$data['product_price'] 		= $record->get('price', 0);
 		$data['product_quantity'] 	= $record->get('quantity', 0);
-		$data['product_full_image']	= $record->get('image');
+		$data['product_full_image']	= $record->get('image', '');
 
 		return $data;
+	}
+
+	protected function getCategory($record)
+	{
+		$category = $record->get('category', '');
+		$tree = explode(":", $category);
+
+		foreach ($tree as &$t) {
+			$t = trim($t);
+		}
+		
+		$parent = $record->get('parent_category', false);
+
+		if (!in_array($parent, $tree)) {
+			array_unshift($tree, $parent);
+		}
+
+		// Create category tree
+		$parent = 1;
+		foreach ($tree as $c) {
+			// check for existance
+			JModel::addIncludePath(JPATH_ADMINISTRATOR . DS . 'components' . DS . 'com_tienda' . DS . 'models');
+			$model = JModel::getInstance('Categories', 'TiendaModel');
+			$model -> setState('filter_name', $c);
+			$matches = $model->getList();
+			$matched = false;
+
+			if ($matches) {
+				foreach ($matches as $match) {
+					// is a perfect match?
+					if (strtolower($c) == strtolower($match->category_name)) {
+						$category_id = $match->category_id;
+						$matched = true;
+					}
+				}
+			}
+
+			$category = JTable::getInstance('Categories', 'TiendaTable');
+
+			// Update only if necessary
+			if ($matched) {
+				
+				$category->load($category_id);
+
+				if ($category->category_name == $c && $category->parent_id == $parent) {
+					$update = false;
+					$parent = $category->category_id;
+				} else {
+					$update = true;
+				}
+			} else {
+				$update = true;
+			}
+
+			if ($update) {
+				$category->category_name = $c;
+				$category->parent_id = $parent;
+				$category->category_enabled = 1;
+				$category->save();
+			}
+			
+			$parent = $category->category_id;
+		}
+
+		return (int) $parent;
 	}
 
 
@@ -294,6 +359,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 				$product -> product_price = 0;
 				$product -> product_quantity = 0;
 				$product -> bind($data);
+				$product -> product_category = $data['product_category'];
+
 				$product -> create();
 
 				//$this -> _migrateAttributes($product -> product_id, $data['product_attributes']);
@@ -353,58 +420,19 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 				// at this point, the product is saved, so now do additional relationships
 
 				// such as categories
-				if (!empty($product -> product_id) && !empty($data['product_categories'])) {
-					foreach ($data['product_categories'] as $category_id) {
-						// This is probably not the best way to do it
-						// Numeric = id, string = category name
-						if (!is_numeric($category_id)) {
-							// check for existance
-							JModel::addIncludePath(JPATH_ADMINISTRATOR . DS . 'components' . DS . 'com_tienda' . DS . 'models');
-							$model = JModel::getInstance('Categories', 'TiendaModel');
-							$model -> setState('filter_name', $category_id);
-							$matches = $model -> getList();
-							$matched = false;
+				if (!empty($product->product_id) && !empty($data['product_category'])) {
 
-							if ($matches) {
-								foreach ($matches as $match) {
-									// is a perfect match?
-									if (strtolower($category_id) == strtolower($match -> category_name)) {
-										$category_id = $match -> category_id;
-										$matched = true;
-									}
-								}
-							}
+					$data['product_category'] = (array) $data['product_category'];
 
-							// Not matched, create category
-							if (!$matched) {
-								$category = JTable::getInstance('Categories', 'TiendaTable');
-								$category -> category_name = $category_id;
-								$category -> parent_id = 1;
-								$category -> category_enabled = 1;
-								$category -> save();
-
-								$category_id = $category -> category_id;
-							}
-
-						}
-
+					foreach ($data['product_category'] as $category_id) {
 						// save xref in every case
 						$xref = JTable::getInstance('ProductCategories', 'TiendaTable');
-						$xref -> product_id = $product -> product_id;
-						$xref -> category_id = $category_id;
-						$xref -> save();
+						$xref->product_id = $product->product_id;
+						$xref->category_id = $category_id;
+						$xref->save();
 					}
 				}
-
-				$results[$n] -> title = $product -> product_name;
-				$results[$n] -> query = "";
-				$results[$n] -> error = implode('\n', $product -> getErrors());
-				$results[$n] -> affectedRows = 1;
-
-				$n++;
-
 				//$this -> _migrateImages($product -> product_id, $data['product_images'], $results);
-
 			}
 
 		}

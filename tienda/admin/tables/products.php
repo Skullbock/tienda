@@ -371,10 +371,11 @@ class TiendaTableProducts extends TiendaTableEav
 					}
 					
 					// save xref in every case
-					Tienda::load( 'TiendaTableProductCategories', 'tables.productcategories' );
+					Tienda::load('TiendaTableProductCategories', 'tables.productcategories');
 					$xref = JTable::getInstance( 'ProductCategories', 'TiendaTable' );
 					$xref->product_id = $this->product_id;
 					$xref->category_id = $product_category;
+
 					$xref->save( );
 				}
 			}
