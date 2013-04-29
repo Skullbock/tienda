@@ -24,6 +24,8 @@ class TiendaTableNetsuiteproducts extends TiendaTableXref
 		$keynames = array();
 		$keynames['product_id']  = 'product_id';
         $keynames['netsuite_id'] = 'netsuite_id';
+        $keynames['attribute_id'] = 'attribute_id';
+
         $this->setKeyNames( $keynames );
                 
 		$tbl_key 	= 'product_id';
@@ -47,6 +49,11 @@ class TiendaTableNetsuiteproducts extends TiendaTableXref
 		{
 			$this->setError( JText::_('COM_TIENDA_PRODUCT_REQUIRED') );
 			return false;
+		}
+
+		if (empty($this->attribute_id))
+		{
+			$this->attribute_id = 0;
 		}
 		
 		return true;

@@ -263,6 +263,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$data = array();
 
 		$data['product_name'] 		= $this->getProductName($record);
+		$data['product_sku'] 		= $record->get('name', '');
 		$data['product_category']	= array($this->getCategory($record));
 		$data['product_price'] 		= $record->get('price', 0);
 		$data['product_quantity'] 	= $record->get('quantity', 0);
@@ -485,9 +486,70 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	/**
 	 * Import a product attribute from a record
 	 */
-	protected function importAttribute($record) 
+	protected function importAttribute($record, $attribute = 'Color') 
 	{
+		// Get the parent
+		$parent = $record->get('parent');
+		$model = JModel::getInstance('Products', 'TiendaModel');
+		$model->setState('filter_sku', $parent);
+		$list = $model->getList();
 
+		$product = false;
+		foreach ($list as $p) {
+			if ($p->product_sku == $parent) {
+				$product = $p;
+			}
+		}
+		
+		if (!$product) {
+			return false;
+		}
+
+		$parent = $product->product_id;
+
+		// Add the Attribute
+		$table = JTable::getInstance('ProductAttributes', 'TiendaTable');
+		$table->load(array('product_id' => $parent, 'productattribute_name' => $attribute));
+		
+		if (!isset($table->productattribute_id) || !$table->productattribute_id) {
+			$table -> product_id = $parent;
+			$table -> productattribute_name = $attribute;
+			$table -> save();
+		}
+		
+		// Add the Options for this attribute
+		$id = $table -> productattribute_id;
+		
+		// Go for the option
+		if ($id) {
+			$otable = JTable::getInstance('ProductAttributeOptions', 'TiendaTable');
+			$otable -> productattribute_id = $id;
+			$otable -> productattributeoption_name = $record->get('color', $this->getProductName($record));
+			$otable -> productattributeoption_price = $record->get('price', 0);
+			$otable -> productattributeoption_prefix = '=';
+			$otable -> save();
+
+			$option_id = $otable->productattributeoption_id;
+			
+			// And the values
+			if ($option_id) {
+
+				$values = array(
+					'product_full_image' => $record->get('image', ''),
+					'product_model' => $record->get('name')
+				);
+
+				foreach ($values as $k => $v) {
+					$vtable = JTable::getInstance('ProductAttributeOptionValues', 'TiendaTable');
+					$vtable -> productattributeoptionvalue_id = 0;
+					$vtable -> productattributeoption_id = $option_id;
+					$vtable -> productattributeoptionvalue_field = $k;
+					$vtable -> productattributeoptionvalue_operator = 'replace'; 
+					$vtable -> productattributeoptionvalue_value = $v;
+					$vtable -> save();
+				}
+			}
+		}
 	}
 
 	/**
