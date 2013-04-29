@@ -153,8 +153,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return $html;
 	}
 
-	/*
-	 * Verifies the CSV file (our DB in this case)
+	/**
+	 * Load the CSV file, uploading it if necessary
 	 */
 	function loadFile() {
 		$state = $this -> _getState();
@@ -198,6 +198,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return $success;
 	}
 
+	/**
+	 * Get the total number of records in the CSV file smartly
+	 */
 	protected function getTotalRecords()
 	{
 		$state = $this -> _getState();
@@ -220,11 +223,17 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return $lines;
 	}
 
+	/**
+	 * Get the first 10 rows of the csv file
+	 */
 	protected function getPreview() 
 	{
 		return $this->getRows(0, 10);
 	}
 
+	/**
+	 * Ajax method to proxy the importing
+	 */
 	public function ajaxImport()
 	{
 		$state = $this->_getState();
@@ -246,7 +255,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return $processed;
 	}
 
-
+	/**
+	 * Map the fields in the csv to the tienda ones
+	 */
 	protected function mapTiendaFields($record) 
 	{
 		$data = array();
@@ -260,6 +271,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return $data;
 	}
 
+	/**
+	 * Get the category id of the product, creating the category tree if necessary
+	 */
 	protected function getCategory($record)
 	{
 		$category = $record->get('category', '');
@@ -325,7 +339,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		return (int) $parent;
 	}
 
-
+	/**
+	 * The real importing is done here
+	 */
 	protected function import($records)
 	{
 		// Loop though the rows
@@ -438,6 +454,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		}
 	}
 
+	/**
+	 * Get a set of rows from the csv smartly
+	 */
 	protected function getRows($start = 0, $limit = 25 )
 	{
 		$state = $this->_getState();
