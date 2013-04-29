@@ -262,7 +262,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	{
 		$data = array();
 
-		$data['product_name'] 		= $record->get('display_name', $record->get('name', ''));
+		$data['product_name'] 		= $this->getProductName($record);
 		$data['product_category']	= array($this->getCategory($record));
 		$data['product_price'] 		= $record->get('price', 0);
 		$data['product_quantity'] 	= $record->get('quantity', 0);
@@ -272,21 +272,36 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	}
 
 	/**
+	 * Get the product name
+	 */
+	protected function getProductName($record)
+	{
+		$name = $record->get('display_name', $record->get('name', ''));
+		
+		// Split : netsuite way of parent->child
+		if ($record->get('parent', false) && stripos($name, ":")) {
+			$parts = explode(":", $name);
+			$name = trim($parts[count($parts) - 1]);
+		}
+
+		return $name;
+	}
+
+	/**
 	 * Get the category id of the product, creating the category tree if necessary
 	 */
 	protected function getCategory($record)
 	{
 		$category = $record->get('category', '');
-		$tree = explode(":", $category);
+
+		if ($record->get('parent_category', false) && stripos($category, ":")) {
+			$tree = explode(":", $category);
+		} else {
+			$tree = array($category);
+		}
 
 		foreach ($tree as &$t) {
 			$t = trim($t);
-		}
-		
-		$parent = $record->get('parent_category', false);
-
-		if (!in_array($parent, $tree)) {
-			array_unshift($tree, $parent);
 		}
 
 		// Create category tree
