@@ -266,8 +266,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$data['product_sku'] 		= $record->get('name', '');
 		$data['product_category']	= array($this->getCategory($record));
 		$data['product_price'] 		= $record->get('price', 0);
-		$data['product_quantity'] 	= $record->get('quantity', 0);
 		$data['product_full_image']	= $record->get('image', '');
+
+		$q = $record->get('quantity', 0);
+		if ($q) {
+			$data['product_quantity'] = $q;
+		} 
 
 		return $data;
 	}
@@ -404,13 +408,11 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		// If is a new product, use product->create()
 		if ($isNew) {
 			$product -> product_price = 0;
-			$product -> product_quantity = 0;
+			$product -> product_check_inventory = 1;
 			$product -> bind($data);
 			$product -> product_category = $data['product_category'];
 
 			$product -> create();
-
-			//$this -> _migrateAttributes($product -> product_id, $data['product_attributes']);
 		}
 		// else use the save() method
 		else {
@@ -519,7 +521,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		
 		// Add the Options for this attribute
 		$id = $table -> productattribute_id;
-		
+
+		$model->clearCache();
+
 		// Go for the option
 		if ($id) {
 			$otable = JTable::getInstance('ProductAttributeOptions', 'TiendaTable');
@@ -534,6 +538,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			// And the values
 			if ($option_id) {
 
+				// Override values for the variations
 				$values = array(
 					'product_full_image' => $record->get('other_image', ''),
 					'product_model' => $record->get('name')
@@ -548,6 +553,21 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 					$vtable -> productattributeoptionvalue_value = $v;
 					$vtable -> save();
 				}
+
+				$qhelper = new TiendaHelperProduct();
+
+				// Renconcile First
+				$model->clearCache();
+				$qhelper->doProductQuantitiesReconciliation($parent);
+				$model->clearCache();
+
+				// Deal with quantities
+				$qtable = JTable::getInstance('ProductQuantities', 'TiendaTable');
+				$qtable->load(array('product_id' => $parent, 'product_attributes' => $option_id));
+				$qtable->product_id = $parent;
+				$qtable->product_attributes = $option_id;
+				$qtable->quantity = $record->get('quantity', 0);
+				$qtable->save();
 			}
 		}
 	}
