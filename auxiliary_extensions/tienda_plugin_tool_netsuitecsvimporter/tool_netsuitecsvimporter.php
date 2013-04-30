@@ -514,7 +514,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	/**
 	 * Import a product attribute from a record
 	 */
-	protected function importAttribute($record, $attribute = 'Color') 
+	protected function importAttribute($record) 
 	{
 		// Get the parent
 		$parent = $record->get('parent');
@@ -535,101 +535,116 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 		$parent = $product->product_id;
 
-		// Add the Attribute
-		$table = JTable::getInstance('ProductAttributes', 'TiendaTable');
-		$table->load(array('product_id' => $parent, 'productattribute_name' => $attribute));
+		// Available attributes and options
+		$options = $this->getAttributeOptions($record, $parent);
 		
-		if (!isset($table->productattribute_id) || !$table->productattribute_id) {
-			$table -> product_id = $parent;
-			$table -> productattribute_name = $attribute;
-			$table -> save();
-		}
-		
-		// Add the Options for this attribute
-		$id = $table -> productattribute_id;
+		// And the values
+		if ($options) {
 
-		$model->clearCache();
+			// CSV of attribute options
+			sort($options);
+			$options = implode(",", $options);
 
-		// Go for the option
-		if ($id) {
-			$otable = JTable::getInstance('ProductAttributeOptions', 'TiendaTable');
+			// Save quantity
+			$quantity = $record->get('quantity', 0);
+			if ($quantity) {
+				$qhelper = new TiendaHelperProduct();
 
-			$nxref = $this->getNetsuiteXref($record->get('netsuite_id'));
+				// Renconcile First
+				$model->clearCache();
+				$qhelper->doProductQuantitiesReconciliation($parent);
+				$model->clearCache();
 
-			if (isset($nxref->option_id) && $nxref->option_id) {
-				$otable->load($nxref->option_id);
+				// Deal with quantities
+				$qtable = JTable::getInstance('ProductQuantities', 'TiendaTable');
+				$qtable->load(array('product_id' => $parent, 'product_attributes' => $options));
+				$qtable->product_id = $parent;
+				$qtable->product_attributes = $options;
+				$qtable->quantity = $quantity;
+				$qtable->save();
 			}
 
-			$otable -> productattribute_id = $id;
-
-			$color = $record->get('color', $this->getProductName($record));
-			if ($color) {
-				$otable -> productattributeoption_name = $color;
-			}
-
-			$price = $record->get('price', 0);
-			if ($price) {
-				$otable -> productattributeoption_price = $price;
-				$otable -> productattributeoption_prefix = '=';
-			}
-
-			$otable -> save();
-
-			$option_id = $otable->productattributeoption_id;
-
-			// Save xref
-			$this->saveXref($record->get('netsuite_id'), $parent, $option_id);
-			
-			// And the values
-			if ($option_id) {
-
-				// Override values for the variations
-				$values = array(
-					'product_full_image' => $record->get('other_image', ''),
-					'product_model' => $record->get('name')
-				);
-
-				foreach ($values as $k => $v) {
-					if ($v) {
-						$vtable = JTable::getInstance('ProductAttributeOptionValues', 'TiendaTable');
-						$vtable->load(array('productattributeoption_id' => $option_id, 'productattributeoptionvalue_field' => $k));
-
-						$vtable -> productattributeoption_id = $option_id;
-						$vtable -> productattributeoptionvalue_field = $k;
-						$vtable -> productattributeoptionvalue_operator = 'replace'; 
-						$vtable -> productattributeoptionvalue_value = $v;
-						$vtable -> save();
-					}
-				}
-
-				$quantity = $record->get('quantity', 0);
-				if ($quantity) {
-					$qhelper = new TiendaHelperProduct();
-
-					// Renconcile First
-					$model->clearCache();
-					$qhelper->doProductQuantitiesReconciliation($parent);
-					$model->clearCache();
-
-					// Deal with quantities
-					$qtable = JTable::getInstance('ProductQuantities', 'TiendaTable');
-					$qtable->load(array('product_id' => $parent, 'product_attributes' => $option_id));
-					$qtable->product_id = $parent;
-					$qtable->product_attributes = $option_id;
-					$qtable->quantity = $quantity;
-					$qtable->save();
-				}
-			}
+			$this->saveXref($record->get('netsuite_id'), $parent, $options);
 		}
 	}
 
-	protected function saveXref($netsuite_id, $product_id, $option_id = 0)
+	/**
+	 * Build attributes and attribute options based on the record info
+	 */
+	protected function getAttributeOptions($record, $parent)
+	{
+		$model = JModel::getInstance('Products', 'TiendaModel');
+
+		$attributes = array('color' => 'Color', 'size' => 'Size', 'earring_closure' => 'Earring Closure');
+		$options = array();
+
+		foreach ($attributes as $key => $attribute) {
+
+			$value = $record->get($key, false);
+
+			if ($value) {
+
+				// Add the Attribute
+				$table = JTable::getInstance('ProductAttributes', 'TiendaTable');
+				$table->load(array('product_id' => $parent, 'productattribute_name' => $attribute));
+				
+				if (!isset($table->productattribute_id) || !$table->productattribute_id) {
+					$table -> product_id = $parent;
+					$table -> productattribute_name = $attribute;
+					$table -> save();
+				}
+				
+				// Add the Options for this attribute
+				$id = $table -> productattribute_id;
+
+				$model->clearCache();
+
+				// Go for the option
+				if ($id) {
+					$otable = JTable::getInstance('ProductAttributeOptions', 'TiendaTable');
+					
+					if (!$otable->load(array('productattribute_id' => $id, 'productattributeoption_name' => $value))) {
+						$otable -> productattribute_id = $id;
+						$otable -> productattributeoption_name = $value;
+						$otable -> save();
+					}
+
+					$option_id = $otable->productattributeoption_id;
+
+					// Override values for the variations
+					$values = array(
+						'product_full_image' => $record->get('other_image', ''),
+						'product_model' => $record->get('name')
+					);
+
+					foreach ($values as $k => $v) {
+						if ($v) {
+							$vtable = JTable::getInstance('ProductAttributeOptionValues', 'TiendaTable');
+							$vtable->load(array('productattributeoption_id' => $option_id, 'productattributeoptionvalue_field' => $k));
+
+							$vtable -> productattributeoption_id = $option_id;
+							$vtable -> productattributeoptionvalue_field = $k;
+							$vtable -> productattributeoptionvalue_operator = 'replace'; 
+							$vtable -> productattributeoptionvalue_value = $v;
+							$vtable -> save();
+						}
+					}
+
+					$options[] = $option_id;
+				}
+			}
+		}
+
+		return $options;
+	}
+
+	protected function saveXref($netsuite_id, $product_id, $options = '')
 	{
 		$table = JTable::getInstance('Netsuiteproducts', 'TiendaTable');
-		$table->load(array('product_id' => $product_id, 'netsuite_id' => $netsuite_id, 'option_id' => $option_id));
+		$table->load(array('product_id' => $product_id, 'netsuite_id' => $netsuite_id, 'option_id' => $options));
 		$table->netsuite_id = $netsuite_id;
 		$table->product_id = $product_id;
-		$table->option_id = $option_id;
+		$table->option_id = $options;
 
 		$table->save();
 	}
@@ -1056,11 +1071,10 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
         $sql = "CREATE TABLE `#__tienda_netsuiteproductsxref` (
 			  `netsuite_id` int(11) NOT NULL,
 			  `product_id` int(11) NOT NULL,
-			  `option_id` int(11) NOT NULL DEFAULT '0',
-			  PRIMARY KEY (`netsuite_id`,`product_id`,`option_id`),
-			  KEY `netsuite_id` (`netsuite_id`),
+			  `option_id` text NOT NULL,
+			  PRIMARY KEY (`netsuite_id`),
 			  KEY `product_id` (`product_id`),
-			  KEY `option_id` (`option_id`)
+			  KEY `netsuite_id` (`netsuite_id`,`product_id`)
 			) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 							
         $db = JFactory::getDBO();
@@ -1068,8 +1082,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
         $result = $db->query();
 
         $sql = "ALTER TABLE `#__tienda_netsuiteproductsxref`
-				  ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE,
-				  ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_2` FOREIGN KEY (`option_id`) REFERENCES `#__tienda_productattributeoptions` (`productattributeoption_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
+  				ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
 
         $db->setQuery($sql);
         $result_2 = $db->query();
