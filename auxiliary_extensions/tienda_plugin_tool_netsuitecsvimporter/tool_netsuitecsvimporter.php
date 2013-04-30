@@ -572,6 +572,11 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		}
 	}
 
+	protected function saveXref($netsuite_id, $product_id, $option_id = 0)
+	{
+
+	}
+
 	/**
 	 * Get a set of rows from the csv smartly
 	 */
@@ -982,18 +987,20 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
         $sql = "CREATE TABLE `#__tienda_netsuiteproductsxref` (
 			  `netsuite_id` int(11) NOT NULL,
 			  `product_id` int(11) NOT NULL,
-			  PRIMARY KEY (`netsuite_id`,`product_id`),
+			  `option_id` int(11) NOT NULL DEFAULT '0',
+			  PRIMARY KEY (`netsuite_id`,`product_id`,`option_id`),
 			  KEY `netsuite_id` (`netsuite_id`),
 			  KEY `product_id` (`product_id`),
-			  KEY `netsuite_id_2` (`netsuite_id`,`product_id`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8";
+			  KEY `option_id` (`option_id`)
+			) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
 							
         $db = JFactory::getDBO();
         $db->setQuery($sql);
         $result = $db->query();
 
         $sql = "ALTER TABLE `#__tienda_netsuiteproductsxref`
-			  ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
+				  ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE,
+				  ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_2` FOREIGN KEY (`option_id`) REFERENCES `#__tienda_productattributeoptions` (`productattributeoption_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
 
         $db->setQuery($sql);
         $result_2 = $db->query();
