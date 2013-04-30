@@ -364,6 +364,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	 */
 	protected function import($records)
 	{
+		JTable::addIncludePath(JPATH_ADMINISTRATOR . DS . 'components' . DS . 'com_tienda' . DS . 'tables');
+		JTable::addIncludePath(dirname(__FILE__) . DS . $this->_element . DS . 'tables');
+
 		// Loop though the rows
 		foreach ($records as $record) {
 
@@ -385,21 +388,17 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	protected function importProduct($record)
 	{
 		// First: Netsuite ID check. It was already imported?
-		$netsuite_id = $record->get('netsuite_id', false);
-		
-		JTable::addIncludePath(JPATH_ADMINISTRATOR . DS . 'components' . DS . 'com_tienda' . DS . 'tables');
-		JTable::addIncludePath(dirname(__FILE__) . DS . $this->_element . DS . 'tables');
-
-		$txref = JTable::getInstance('Netsuiteproducts', 'TiendaTable');
-		$xref = $txref->load(array('netsuite_id' => $netsuite_id));
+		$netsuite_id = $record->get('netsuite_id');
+	
+		$nxref = $this->getNetsuiteXref($netsuite_id);
 
 		$product = JTable::getInstance('Products', 'TiendaTable');
 		
 		$isNew = true;
 
 		// Update!
-		if (isset($xref->product_id)) {
-			$product_id = $xref->product_id;
+		if (isset($nxref->product_id)) {
+			$product_id = $nxref->product_id;
 			$isNew = false;
 		}
 
@@ -413,6 +412,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$product -> product_category = $data['product_category'];
 
 			$product -> create();
+
+			// Save netsuite xref
+			$this->saveXref($netsuite_id, $product->product_id);
 		}
 		// else use the save() method
 		else {
@@ -421,47 +423,51 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 			//check if normal price exists
 			Tienda::load("TiendaHelperProduct", 'helpers.product');
-			$prices = TiendaHelperProduct::getPrices($product -> product_id);
-			$quantities = TiendaHelperProduct::getProductQuantities($product -> product_id);
+			$helper = new TiendaHelperProduct();
+			$prices = $helper->getPrices($product -> product_id);
+			$quantities = $helper->getProductQuantities($product -> product_id);
 
 			if ($product -> save()) {
-				$product -> product_id = $product -> id;
 
-				// New price?
-				if (empty($prices)) {
-					// set price if new or no prices set
-					$price = JTable::getInstance('Productprices', 'TiendaTable');
-					$price -> product_id = $product -> id;
-					$price -> product_price = $data['product_price'];
-					$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
-					$price -> save();
-				}
-				// Overwrite price
-				else {
-					// set price if new or no prices set
-					$price = JTable::getInstance('Productprices', 'TiendaTable');
-					$price -> load($prices[0] -> product_price_id);
-					$price -> product_price = $data['product_price'];
-					$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
-					$price -> save();
+				if (isset($data['product_price'])) {
+					// New price?
+					if (empty($prices)) {
+						// set price if new or no prices set
+						$price = JTable::getInstance('Productprices', 'TiendaTable');
+						$price -> product_id = $product -> id;
+						$price -> product_price = $data['product_price'];
+						$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
+						$price -> save();
+					}
+					// Overwrite price
+					else {
+						// set price if new or no prices set
+						$price = JTable::getInstance('Productprices', 'TiendaTable');
+						$price -> load($prices[0] -> product_price_id);
+						$price -> product_price = $data['product_price'];
+						$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
+						$price -> save();
+					}
 				}
 
-				// New quantity?
-				if (empty($quantities)) {
-					// save default quantity
-					$quantity = JTable::getInstance('Productquantities', 'TiendaTable');
-					$quantity -> product_id = $product -> id;
-					$quantity -> quantity = $data['product_quantity'];
-					$quantity -> save();
-				}
-				// Overwrite Quantity
-				else {
-					// save default quantity
-					$quantity = JTable::getInstance('Productquantities', 'TiendaTable');
-					$quantity -> load($quantities[0] -> productquantity_id);
-					$quantity -> product_id = $product -> id;
-					$quantity -> quantity = $data['product_quantity'];
-					$quantity -> save();
+				if (isset($data['product_quantity'])) {
+					// New quantity?
+					if (empty($quantities)) {
+						// save default quantity
+						$quantity = JTable::getInstance('Productquantities', 'TiendaTable');
+						$quantity -> product_id = $product -> id;
+						$quantity -> quantity = $data['product_quantity'];
+						$quantity -> save();
+					}
+					// Overwrite Quantity
+					else {
+						// save default quantity
+						$quantity = JTable::getInstance('Productquantities', 'TiendaTable');
+						$quantity -> load(array('product_id' => $product->product_id, 'product_attributes' => ''));
+						$quantity -> product_id = $product -> product_id;
+						$quantity -> quantity = $data['product_quantity'];
+						$quantity -> save();
+					}
 				}
 
 			}
@@ -469,13 +475,14 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			// at this point, the product is saved, so now do additional relationships
 
 			// such as categories
-			if (!empty($product->product_id) && !empty($data['product_category'])) {
+			if (!empty($product->product_id) && isset($data['product_category'])) {
 
 				$data['product_category'] = (array) $data['product_category'];
 
 				foreach ($data['product_category'] as $category_id) {
 					// save xref in every case
 					$xref = JTable::getInstance('ProductCategories', 'TiendaTable');
+					$xref->load(array('product_id' => $product_id, 'category_id' => $category_id));
 					$xref->product_id = $product->product_id;
 					$xref->category_id = $category_id;
 					$xref->save();
@@ -527,6 +534,13 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		// Go for the option
 		if ($id) {
 			$otable = JTable::getInstance('ProductAttributeOptions', 'TiendaTable');
+
+			$nxref = $this->getNetsuiteXref($record->get('netsuite_id'));
+
+			if (isset($nxref->option_id) && $nxref->option_id) {
+				$otable->load($nxref->option_id);
+			}
+
 			$otable -> productattribute_id = $id;
 			$otable -> productattributeoption_name = $record->get('color', $this->getProductName($record));
 			$otable -> productattributeoption_price = $record->get('price', 0);
@@ -534,6 +548,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$otable -> save();
 
 			$option_id = $otable->productattributeoption_id;
+
+			// Save xref
+			$this->saveXref($record->get('netsuite_id'), $parent, $option_id);
 			
 			// And the values
 			if ($option_id) {
@@ -546,7 +563,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 				foreach ($values as $k => $v) {
 					$vtable = JTable::getInstance('ProductAttributeOptionValues', 'TiendaTable');
-					$vtable -> productattributeoptionvalue_id = 0;
+					$vtable->load(array('productattributeoption_id' => $option_id, 'productattributeoptionvalue_field' => $k));
+
 					$vtable -> productattributeoption_id = $option_id;
 					$vtable -> productattributeoptionvalue_field = $k;
 					$vtable -> productattributeoptionvalue_operator = 'replace'; 
@@ -574,7 +592,25 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 	protected function saveXref($netsuite_id, $product_id, $option_id = 0)
 	{
+		$table = JTable::getInstance('Netsuiteproducts', 'TiendaTable');
+		$table->load(array('product_id' => $product_id, 'netsuite_id' => $netsuite_id, 'option_id' => $option_id));
+		$table->netsuite_id = $netsuite_id;
+		$table->product_id = $product_id;
+		$table->option_id = $option_id;
 
+		$table->save();
+	}
+
+	protected function getNetsuiteXref($netsuite_id) 
+	{
+		$table = JTable::getInstance('Netsuiteproducts', 'TiendaTable');
+		$table->load((int)$netsuite_id);
+
+		if (isset($table->product_id)) {
+			return $table;
+		}
+
+		return false;
 	}
 
 	/**

@@ -56,11 +56,16 @@ class TiendaControllerTools extends TiendaController
         $model->getId();
         $row = $model->getItem();
 
-        if (empty($row->published))
+        if ((isset($row->published) && empty($row->published)) || (isset($row->state) && empty($row->state)))
         {
             $table = $model->getTable();
             $table->load( $row->id );
-            $table->published = 1;
+            if (isset($table->published)) {
+                $table->published = 1;
+            } else {
+                $table->state = 1;
+            }
+            
             if ($table->save())
             {
                 $redirect = "index.php?option=com_tienda&view=".$this->get('suffix')."&task=view&id=".$model->getId();

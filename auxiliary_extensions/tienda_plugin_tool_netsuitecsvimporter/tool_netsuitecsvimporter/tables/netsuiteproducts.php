@@ -20,15 +20,8 @@ class TiendaTableNetsuiteproducts extends TiendaTableXref
 	 * @return unknown_type
 	 */
 	function TiendaTableNetsuiteProducts ( &$db ) 
-	{
-		$keynames = array();
-		$keynames['product_id']  = 'product_id';
-        $keynames['netsuite_id'] = 'netsuite_id';
-        $keynames['attribute_id'] = 'attribute_id';
-
-        $this->setKeyNames( $keynames );
-                
-		$tbl_key 	= 'product_id';
+	{                
+		$tbl_key 	= 'netsuite_id';
 		$tbl_suffix = 'netsuiteproductsxref';
 		$name 		= 'tienda';
 		
@@ -51,9 +44,9 @@ class TiendaTableNetsuiteproducts extends TiendaTableXref
 			return false;
 		}
 
-		if (empty($this->attribute_id))
+		if (!$this->option_id)
 		{
-			$this->attribute_id = 0;
+			$this->option_id = null;
 		}
 		
 		return true;
