@@ -262,11 +262,30 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	{
 		$data = array();
 
-		$data['product_name'] 		= $this->getProductName($record);
-		$data['product_sku'] 		= $record->get('name', '');
-		$data['product_category']	= array($this->getCategory($record));
-		$data['product_price'] 		= $record->get('price', 0);
-		$data['product_full_image']	= $record->get('image', '');
+		$name = $this->getProductName($record);
+		if ($name) {
+			$data['product_name'] 		= $name;
+		}
+
+		$sku = $record->get('name', '');
+		if ($sku) {
+			$data['product_sku'] 		= $sku;
+		}
+
+		$category = $this->getCategory($record);
+		if ($category) {
+			$data['product_category']	= array($category);
+		}
+
+		$price = $record->get('price', 0);
+		if ($price) {
+			$data['product_price'] 		= $price;
+		}
+
+		$image = $record->get('image', '');
+		if ($image) {
+			$data['product_full_image']	= $image;
+		}
 
 		$q = $record->get('quantity', 0);
 		if ($q) {
@@ -542,9 +561,18 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			}
 
 			$otable -> productattribute_id = $id;
-			$otable -> productattributeoption_name = $record->get('color', $this->getProductName($record));
-			$otable -> productattributeoption_price = $record->get('price', 0);
-			$otable -> productattributeoption_prefix = '=';
+
+			$color = $record->get('color', $this->getProductName($record));
+			if ($color) {
+				$otable -> productattributeoption_name = $color;
+			}
+
+			$price = $record->get('price', 0);
+			if ($price) {
+				$otable -> productattributeoption_price = $price;
+				$otable -> productattributeoption_prefix = '=';
+			}
+
 			$otable -> save();
 
 			$option_id = $otable->productattributeoption_id;
@@ -562,30 +590,35 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 				);
 
 				foreach ($values as $k => $v) {
-					$vtable = JTable::getInstance('ProductAttributeOptionValues', 'TiendaTable');
-					$vtable->load(array('productattributeoption_id' => $option_id, 'productattributeoptionvalue_field' => $k));
+					if ($v) {
+						$vtable = JTable::getInstance('ProductAttributeOptionValues', 'TiendaTable');
+						$vtable->load(array('productattributeoption_id' => $option_id, 'productattributeoptionvalue_field' => $k));
 
-					$vtable -> productattributeoption_id = $option_id;
-					$vtable -> productattributeoptionvalue_field = $k;
-					$vtable -> productattributeoptionvalue_operator = 'replace'; 
-					$vtable -> productattributeoptionvalue_value = $v;
-					$vtable -> save();
+						$vtable -> productattributeoption_id = $option_id;
+						$vtable -> productattributeoptionvalue_field = $k;
+						$vtable -> productattributeoptionvalue_operator = 'replace'; 
+						$vtable -> productattributeoptionvalue_value = $v;
+						$vtable -> save();
+					}
 				}
 
-				$qhelper = new TiendaHelperProduct();
+				$quantity = $record->get('quantity', 0);
+				if ($quantity) {
+					$qhelper = new TiendaHelperProduct();
 
-				// Renconcile First
-				$model->clearCache();
-				$qhelper->doProductQuantitiesReconciliation($parent);
-				$model->clearCache();
+					// Renconcile First
+					$model->clearCache();
+					$qhelper->doProductQuantitiesReconciliation($parent);
+					$model->clearCache();
 
-				// Deal with quantities
-				$qtable = JTable::getInstance('ProductQuantities', 'TiendaTable');
-				$qtable->load(array('product_id' => $parent, 'product_attributes' => $option_id));
-				$qtable->product_id = $parent;
-				$qtable->product_attributes = $option_id;
-				$qtable->quantity = $record->get('quantity', 0);
-				$qtable->save();
+					// Deal with quantities
+					$qtable = JTable::getInstance('ProductQuantities', 'TiendaTable');
+					$qtable->load(array('product_id' => $parent, 'product_attributes' => $option_id));
+					$qtable->product_id = $parent;
+					$qtable->product_attributes = $option_id;
+					$qtable->quantity = $quantity;
+					$qtable->save();
+				}
 			}
 		}
 	}
