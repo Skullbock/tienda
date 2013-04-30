@@ -241,6 +241,10 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$total = JRequest::getVar('total', false);
 		$limit = JRequest::getVar('limit', 25);
 
+		if ($start == 0) {
+			$this->clearLogFile();
+		}
+
 		$records = $this->getRows($start, $limit);
 
 		$this->import($records);
@@ -276,6 +280,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		if ($category) {
 			$data['product_category']	= array($category);
 		}
+
+		$description = $record->get('description', false);
+		if ($description) {
+			$data['product_description']	= array($category);
+		}
+
 
 		$price = $record->get('price', 0);
 		if ($price) {
@@ -430,10 +440,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$product -> bind($data);
 			$product -> product_category = $data['product_category'];
 
-			$product -> create();
-
-			// Save netsuite xref
-			$this->saveXref($netsuite_id, $product->product_id);
+			if ($product -> create()) {
+				// Save netsuite xref
+				$this->saveXref($netsuite_id, $product->product_id);
+			} else {
+				$this->log($netsuite_id, 'Cannot create new product. Data was: ' . json_encode($data));
+			}
 		}
 		// else use the save() method
 		else {
@@ -489,6 +501,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 					}
 				}
 
+			} else {
+				$this->log($netsuite_id, 'Could not update product. Data was: ' . json_encode($data));
 			}
 
 			// at this point, the product is saved, so now do additional relationships
@@ -530,6 +544,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		}
 		
 		if (!$product) {
+			$this->log($record->get('netsuite_id'), 'Could not import attribute, product not found. Parent field was '. $parent);
 			return false;
 		}
 
@@ -565,6 +580,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			}
 
 			$this->saveXref($record->get('netsuite_id'), $parent, $options);
+		} else {
+			$this->log($record->get('netsuite_id'), 'Could not import attribute, options are empty.');
 		}
 	}
 
@@ -1055,6 +1072,37 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		} else {
 			return FALSE;
 		}
+	}
+
+	private function log($netsuite_id, $message)
+	{
+		$filename = JPATH_SITE . '/tmp/' . JFactory::getSession()->getId() . '.log';
+		$file = fopen($filename, 'a');
+
+		$log = '[' . JFactory::getDate()->format('Y-m-d H:i:s') . '] ' . $netsuite_id . ' was not imported: ' . $message . "\n";
+
+		fwrite($file, $log);
+		fclose($file);
+	}
+
+	private function clearLogFile()
+	{
+		$filename = JPATH_SITE . '/tmp/' . JFactory::getSession()->getId() . '.log';
+		$file = fopen($filename, 'w');
+
+		fwrite($file, '');
+		fclose($file);
+	}
+
+
+	public function getLogs()
+	{
+		$filename = JPATH_SITE . '/tmp/' . JFactory::getSession()->getId() . '.log';
+		$logs = JFile::read($filename);
+
+		$logs = nl2br($logs);
+
+		return $logs;
 	}
 
 	/**

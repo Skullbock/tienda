@@ -9,12 +9,18 @@
     </div>
    </div>
 
+   <div id="netsuite-import-log" style="height: 200px; display:none; overflow: scroll;">
+        <h3>Log</h3>
+        <div class="logs note"></div>
+        <a href="<?php echo JURI::root(); ?>/tmp/<?php echo JFactory::getSession()->getId(); ?>.log" target="_blank">Download Log</a>
+   </div>
+
 <script type="text/javascript">
 tiendaJQ(document).ready(function($){
     var form = $('form.adminform');
     $('[name="task"]', form).val('view');
     var url = 'index.php?option=com_tienda&controller=tools&task=doTaskAjax&element=tool_netsuitecsvimporter.tienda&elementTask=ajaxImport&format=raw'
-    
+    var logs = 'index.php?option=com_tienda&controller=tools&task=doTaskAjax&element=tool_netsuitecsvimporter.tienda&elementTask=getLogs&format=raw'
 
     var done = 0;
     function migrate(start) {
@@ -40,6 +46,15 @@ tiendaJQ(document).ready(function($){
                 $('#netsuite-progress-bar').css({width: (done * 100 / total)+'%'})
                 if (done >= total) {
                     $('#netsuite-import-status').html('Import finished');
+                    $.ajax({
+                        url: logs, 
+                        type: 'GET',
+                        dataType: 'json', 
+                        success: function(l){
+                            $('#netsuite-import-log').show();
+                            $('#netsuite-import-log .note').html(l.msg);
+                        }
+                    });
                 } else {
                    migrate(done);
                 }
