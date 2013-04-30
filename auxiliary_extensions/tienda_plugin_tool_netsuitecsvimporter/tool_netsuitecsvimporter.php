@@ -535,7 +535,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			if ($option_id) {
 
 				$values = array(
-					'product_full_image' => $record->get('image', ''),
+					'product_full_image' => $record->get('other_image', ''),
 					'product_model' => $record->get('name')
 				);
 
