@@ -444,7 +444,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 				// Save netsuite xref
 				$this->saveXref($netsuite_id, $product->product_id);
 			} else {
-				$this->log($netsuite_id, 'Cannot create new product. Data was: ' . json_encode($data));
+				$this->log($record, 'Cannot create new product. Data was: ' . json_encode($data));
 			}
 		}
 		// else use the save() method
@@ -502,7 +502,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 				}
 
 			} else {
-				$this->log($netsuite_id, 'Could not update product. Data was: ' . json_encode($data));
+				$this->log($record, 'Could not update product. Data was: ' . json_encode($data));
 			}
 
 			// at this point, the product is saved, so now do additional relationships
@@ -544,7 +544,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		}
 		
 		if (!$product) {
-			$this->log($record->get('netsuite_id'), 'Could not import attribute, product not found. Parent field was '. $parent);
+			$this->log($record, 'Could not import attribute, product not found. Parent field was '. $parent);
 			return false;
 		}
 
@@ -581,7 +581,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 			$this->saveXref($record->get('netsuite_id'), $parent, $options);
 		} else {
-			$this->log($record->get('netsuite_id'), 'Could not import attribute, options are empty.');
+			$this->log($record, 'Could not import attribute, options are empty.');
 		}
 	}
 
@@ -1074,12 +1074,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		}
 	}
 
-	private function log($netsuite_id, $message)
+	private function log($record, $message)
 	{
 		$filename = JPATH_SITE . '/tmp/' . JFactory::getSession()->getId() . '.log';
 		$file = fopen($filename, 'a');
 
-		$log = '[' . JFactory::getDate()->format('Y-m-d H:i:s') . '] ' . $netsuite_id . ' was not imported: ' . $message . "\n";
+		$log = '[' . JFactory::getDate()->format('Y-m-d H:i:s') . '] ' . $record->get('netsuite_id', '') . ' - ' . $record->get('name', '') .' was not imported: ' . $message . "\n";
 
 		fwrite($file, $log);
 		fclose($file);
