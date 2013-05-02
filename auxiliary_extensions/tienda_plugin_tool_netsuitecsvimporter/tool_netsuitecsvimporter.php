@@ -267,12 +267,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$data = array();
 
 		$name = $this->getProductName($record);
-		if ($name) {
+		if ($name != '') {
 			$data['product_name'] 		= $name;
 		}
 
 		$sku = $record->get('name', '');
-		if ($sku) {
+		if ($sku != '') {
 			$data['product_sku'] 		= $sku;
 		}
 
@@ -281,25 +281,40 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$data['product_category']	= array($category);
 		}
 
-		$description = $record->get('description', false);
-		if ($description) {
+		$description = $record->get('description', '');
+		if ($description != '') {
 			$data['product_description']	= array($category);
 		}
 
 
-		$price = $record->get('price', 0);
-		if ($price) {
+		$price = $record->get('price', '');
+		if ($price != '') {
 			$data['product_price'] 		= $price;
 		}
 
 		$image = $record->get('image', '');
-		if ($image) {
+		if ($image != '') {
 			$data['product_full_image']	= $image;
 		}
 
-		$q = $record->get('quantity', 0);
-		if ($q) {
+		$q = $record->get('quantity', '');
+		if ($q != '') {
 			$data['product_quantity'] = $q;
+		} 
+
+		$measurements = $record->get('dimensions', '');
+		if ($measurements  != '') {
+			$data['amritasingh_measurements'] = $measurements;
+		} 
+
+		$necklace_closure = $record->get('necklace_closure', '');
+		if ($necklace_closure  != '') {
+			$data['amritasingh_necklace_closure'] = $necklace_closure;
+		}
+
+		$type = $record->get('type', '');
+		if ($type  != '') {
+			$data['amritasingh_product_type'] = $type;
 		} 
 
 		return $data;
@@ -1111,43 +1126,61 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	private function checkInstallation()
     {
         // if this has already been done, don't repeat
-        if (Tienda::getInstance()->get('checkTableNetsuiteImporter', '0'))
+        if (!Tienda::getInstance()->get('checkTableNetsuiteImporter', '0'))
         {
-            return true;
-        }
-        
-        $sql = "CREATE TABLE `#__tienda_netsuiteproductsxref` (
-			  `netsuite_id` int(11) NOT NULL,
-			  `product_id` int(11) NOT NULL,
-			  `option_id` text NOT NULL,
-			  PRIMARY KEY (`netsuite_id`),
-			  KEY `product_id` (`product_id`),
-			  KEY `netsuite_id` (`netsuite_id`,`product_id`)
-			) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
-							
-        $db = JFactory::getDBO();
-        $db->setQuery($sql);
-        $result = $db->query();
+	        $sql = "CREATE TABLE `#__tienda_netsuiteproductsxref` (
+				  `netsuite_id` int(11) NOT NULL,
+				  `product_id` int(11) NOT NULL,
+				  `option_id` text NOT NULL,
+				  PRIMARY KEY (`netsuite_id`),
+				  KEY `product_id` (`product_id`),
+				  KEY `netsuite_id` (`netsuite_id`,`product_id`)
+				) ENGINE=InnoDB DEFAULT CHARSET=utf8;";
+								
+	        $db = JFactory::getDBO();
+	        $db->setQuery($sql);
+	        $result = $db->query();
 
-        $sql = "ALTER TABLE `#__tienda_netsuiteproductsxref`
-  				ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
+	        $sql = "ALTER TABLE `#__tienda_netsuiteproductsxref`
+	  				ADD CONSTRAINT `#__tienda_netsuiteproductsxref_ibfk_1` FOREIGN KEY (`product_id`) REFERENCES `#__tienda_products` (`product_id`) ON DELETE CASCADE ON UPDATE CASCADE;";
 
-        $db->setQuery($sql);
-        $result_2 = $db->query();
+	        $db->setQuery($sql);
+	        $result_2 = $db->query();
 
-        if ($result && $result_2)
-        {
-            // Update config to say this has been done already
-            JTable::addIncludePath( JPATH_ADMINISTRATOR.'/components/com_tienda/tables' );
-            $config = JTable::getInstance( 'Config', 'TiendaTable' );
-            $config->load( array( 'config_name'=>'checkTableNetsuiteImporter') );
-            $config->config_name = 'checkTableNetsuiteImporter';
-            $config->value = '1';
-            $config->save();
-            return true;
-        }
+	        if ($result && $result_2)
+	        {
+	            // Update config to say this has been done already
+	            JTable::addIncludePath( JPATH_ADMINISTRATOR.'/components/com_tienda/tables' );
+	            $config = JTable::getInstance( 'Config', 'TiendaTable' );
+	            $config->load( array( 'config_name'=>'checkTableNetsuiteImporter') );
+	            $config->config_name = 'checkTableNetsuiteImporter';
+	            $config->value = '1';
+	            $config->save();
+	            return true;
+	        }
+	    }
 
-        return false;        
+	    if (!Tienda::getInstance()->get('checkTableProductsNetsuiteImporter', '0')) {
+	    	$sql = "ALTER TABLE `#__tienda_products`  ADD `amritasingh_measurements` VARCHAR(255) NOT NULL,  ADD `amritasingh_necklace_closure` VARCHAR(255) NOT NULL, ADD `amritasingh_product_type` VARCHAR(255) NOT NULL";
+								
+	        $db = JFactory::getDBO();
+	        $db->setQuery($sql);
+	        $result = $db->query();
+
+	        if ($result)
+	        {
+	            // Update config to say this has been done already
+	            JTable::addIncludePath( JPATH_ADMINISTRATOR.'/components/com_tienda/tables' );
+	            $config = JTable::getInstance( 'Config', 'TiendaTable' );
+	            $config->load( array( 'config_name'=>'checkTableProductsNetsuiteImporter') );
+	            $config->config_name = 'checkTableProductsNetsuiteImporter';
+	            $config->value = '1';
+	            $config->save();
+	            return true;
+	        }
+	    }
+
+        return true;        
     }
 
 }
