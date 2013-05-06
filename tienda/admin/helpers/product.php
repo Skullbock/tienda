@@ -765,17 +765,23 @@ class TiendaHelperProduct extends TiendaHelperBase
         }
 
         $tmpl = "";
+        $isUrl = false;
         if ( strpos( $id, '.' ) )
         {
-            // then this is a filename, return the full img tag if file exists, otherwise use a default image
-            $src = ( JFile::exists( Tienda::getPath( $path ) . DS . $id ) ) ? Tienda::getUrl( $path ) . $id
-            : JURI::root( true ) . '/media/com_tienda/images/noimage.png';
-            	
-            // if url is true, just return the url of the file and not the whole img tag
-            $tmpl = ( $url ) ? $src
-            : "<img " . $dimensions . " src='" . $src . "' alt='" . JText::_( $alt ) . "' title='" . JText::_( $alt )
-            . "' align='middle' border='0' " . $style . " />";
-            	
+            // Aweful, this entire method (or helper) should be rewritten
+            if ($type != 'thumb' && !JURI::isInternal($id )) {
+                $isUrl = true;
+                $imageUrl = $id;
+            } else {
+                // then this is a filename, return the full img tag if file exists, otherwise use a default image
+                $src = ( JFile::exists( Tienda::getPath( $path ) . DS . $id ) ) ? Tienda::getUrl( $path ) . $id
+                : JURI::root( true ) . '/media/com_tienda/images/noimage.png';
+                    
+                // if url is true, just return the url of the file and not the whole img tag
+                $tmpl = ( $url ) ? $src
+                : "<img " . $dimensions . " src='" . $src . "' alt='" . JText::_( $alt ) . "' title='" . JText::_( $alt )
+                . "' align='middle' border='0' " . $style . " />";
+            }            	
         }
         else
         {
@@ -806,82 +812,98 @@ class TiendaHelperProduct extends TiendaHelperBase
                     $dispatcher = JDispatcher::getInstance();
                     $dispatcher->trigger('onGetProductMainImage', array( $row->product_id, &$full_image, $options ) );
                 }
-                $file = $dir . DS . $full_image;
 
-                $id = $urli . $full_image;
+                if ($type != 'thumb' && !JURI::isInternal($full_image)) {
+                    $isUrl = true;
+                    $imageUrl = $full_image;
+                } else {
+                    $file = $dir . DS . $full_image;
 
-                // Gotta do some resizing first?
-                if ( $resize )
-                {
-                    // Add a suffix to the thumb to avoid conflicts with user settings
-                    $suffix = '';
-                    	
-                    if ( isset( $options['width'] ) && isset( $options['height'] ) )
-                    {
-                        $suffix = '_' . $options['width'] . 'x' . $options['height'];
-                    }
-                    elseif ( isset( $options['width'] ) )
-                    {
-                        $suffix = '_w' . $options['width'];
-                    }
-                    elseif ( isset( $options['height'] ) )
-                    {
-                        $suffix = '_h' . $options['height'];
-                    }
-                    	
-                    // Add suffix to file path
-                    $dot = strrpos( $file, '.' );
-                    $resize = substr( $file, 0, $dot ) . $suffix . substr( $file, $dot );
-                    	
-                    if ( !JFile::exists( $resize ) )
-                    {
+                    $id = $urli . $full_image;
 
-                        Tienda::load( 'TiendaImage', 'library.image' );
-                        $image = new TiendaImage( $file);
-                        $image->load( );
-                        // If both width and height set, gotta figure hwo to resize
+                    // Gotta do some resizing first?
+                    if ( $resize )
+                    {
+                        // Add a suffix to the thumb to avoid conflicts with user settings
+                        $suffix = '';
+                            
                         if ( isset( $options['width'] ) && isset( $options['height'] ) )
                         {
-                            // If width is larger, proportionally
-                            if ( ( $options['width'] / $image->getWidth( ) ) < ( $options['height'] / $image->getHeight( ) ) )
+                            $suffix = '_' . $options['width'] . 'x' . $options['height'];
+                        }
+                        elseif ( isset( $options['width'] ) )
+                        {
+                            $suffix = '_w' . $options['width'];
+                        }
+                        elseif ( isset( $options['height'] ) )
+                        {
+                            $suffix = '_h' . $options['height'];
+                        }
+                            
+                        // Add suffix to file path
+                        $dot = strrpos( $file, '.' );
+                        $resize = substr( $file, 0, $dot ) . $suffix . substr( $file, $dot );
+                            
+                        if ( !JFile::exists( $resize ) )
+                        {
+
+                            Tienda::load( 'TiendaImage', 'library.image' );
+                            $image = new TiendaImage( $file);
+                            $image->load( );
+                            // If both width and height set, gotta figure hwo to resize
+                            if ( isset( $options['width'] ) && isset( $options['height'] ) )
+                            {
+                                // If width is larger, proportionally
+                                if ( ( $options['width'] / $image->getWidth( ) ) < ( $options['height'] / $image->getHeight( ) ) )
+                                {
+                                    $image->resizeToWidth( $options['width'] );
+                                    $image->save( $resize );
+                                }
+                                // If height is larger, proportionally
+                                else
+                                {
+                                    $image->resizeToHeight( $options['height'] );
+                                    $image->save( $resize );
+                                }
+                            }
+                            // If only width is set
+                            elseif ( isset( $options['width'] ) )
                             {
                                 $image->resizeToWidth( $options['width'] );
                                 $image->save( $resize );
                             }
-                            // If height is larger, proportionally
-                            else
+                            // If only height is set
+                            elseif ( isset( $options['height'] ) )
                             {
                                 $image->resizeToHeight( $options['height'] );
                                 $image->save( $resize );
                             }
-                        }
-                        // If only width is set
-                        elseif ( isset( $options['width'] ) )
-                        {
-                            $image->resizeToWidth( $options['width'] );
-                            $image->save( $resize );
-                        }
-                        // If only height is set
-                        elseif ( isset( $options['height'] ) )
-                        {
-                            $image->resizeToHeight( $options['height'] );
-                            $image->save( $resize );
-                        }
 
+                        }
+                            
+                        // Add suffix to url path
+                        $dot = strrpos( $id, '.' );
+                        $id = substr( $id, 0, $dot ) . $suffix . substr( $id, $dot );
                     }
-                    	
-                    // Add suffix to url path
-                    $dot = strrpos( $id, '.' );
-                    $id = substr( $id, 0, $dot ) . $suffix . substr( $id, $dot );
+
+                    $src = ( JFile::exists( $file ) ) ? $id : JURI::root( true ) . '/media/com_tienda/images/noimage.png';
+
+                    $tmpl = ( $url ) ? $src
+                    : "<img " . $dimensions . " src='" . $src . "' alt='" . JText::_( $alt ) . "' title='" . JText::_( $alt )
+                    . "' align='middle' border='0' " . $style . " />";
                 }
-
-                $src = ( JFile::exists( $file ) ) ? $id : JURI::root( true ) . '/media/com_tienda/images/noimage.png';
-
-                $tmpl = ( $url ) ? $src
-                : "<img " . $dimensions . " src='" . $src . "' alt='" . JText::_( $alt ) . "' title='" . JText::_( $alt )
-                . "' align='middle' border='0' " . $style . " />";
             }
         }
+
+        if ($isUrl) {
+            if ($url) {
+                return $imageUrl;
+            } else {
+                $tmpl = "<img " . $dimensions . " src='" . $imageUrl . "' alt='" . JText::_( $alt ) . "' title='" . JText::_( $alt )
+                    . "' align='middle' border='0' " . $style . " />";
+            }
+        }
+
         return $tmpl;
     }
 

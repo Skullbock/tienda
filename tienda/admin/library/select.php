@@ -747,6 +747,7 @@ class TiendaSelect extends DSCSelect
         }
         
         $items = $model->getList();
+
         $geozones = array();
         $shipping = false;
         if( count( $items ) )
@@ -792,6 +793,7 @@ class TiendaSelect extends DSCSelect
         	else
             $list[] =  self::option( $item->productattributeoption_id, $display_name );
         }
+
         return self::genericlist($list, $name, $attribs, 'value', 'text', $selected, $idtag  );
     }	
     

@@ -79,8 +79,14 @@ $helper_product = new TiendaHelperProduct();
     if (!empty($row->product_full_image))
     {
         $gallery_url = $helper_product->getGalleryUrl($row->product_id);
+        
+        if (JURI::isInternal($row->product_full_image)) {
+            $image = $gallery_url.'thumbs/'.$row->product_full_image; 
+        } else {
+            $image = $row->product_full_image;
+        }
         ?>
-        <img src="<?php echo $gallery_url; ?>thumbs/<?php echo $row->product_full_image; ?>" class="img-polaroid" />
+        <img src="<?php echo $image; ?>" class="img-polaroid" width="150" />
         <?php
     }
     ?>

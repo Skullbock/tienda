@@ -417,11 +417,53 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$record = new DSCParameter($record);
 
 			if ($record->get('parent', false)) {
-				$this->importAttribute($record);
+				$product = $this->importAttribute($record);
+				$this->createThumb($record->get('other_image', false), $record->get('netsuite_id'), $product);
 			} else {
-				$this->importProduct($record);
+				$product = $this->importProduct($record);
+				$this->createThumb($record->get('image', false), $record->get('netsuite_id'), $product);
 			}
 		}
+	}
+
+	protected function createThumb($image, $netsuite_id, $product)
+	{
+		if ($image && $product && $product->product_id) {
+			$table = JTable::getInstance('Products', 'TiendaTable');
+			$table->load($product->product_id);
+			
+			try {
+				$content = JFile::read($image);
+
+				if ($content) {
+					$path = $table->getImagePath() . '/thumbs/';
+					JFolder::create($path);
+
+					$temp = $path . $netsuite_id . '_orig.png';
+					$thumb = $path . $netsuite_id . '.png';
+					JFile::write($temp, $content);
+				
+					$image = new JImage($temp);
+					$config = Tienda::getInstance();
+
+					$width = $config->get('product_img_width', 50);
+					$height = $config->get('product_img_height', 50);
+					
+					$image = $image->resize($width, $height, true);
+					$image->toFile($thumb);
+
+					JFile::delete($temp);
+
+					// Save in db
+					$table->amritasingh_product_thumb_image = str_replace(JPATH_SITE, '', $thumb);
+					$table->save();
+				}
+			} catch (Exception $e) {
+				return false;
+			}
+		}
+
+		return false;
 	}
 
 	/**
@@ -538,6 +580,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			}
 			//$this -> _migrateImages($product -> product_id, $data['product_images'], $results);
 		}
+
+		return $product;
 	}
 
 	/**
@@ -598,6 +642,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		} else {
 			$this->log($record, 'Could not import attribute, options are empty.');
 		}
+
+		return $product;
 	}
 
 	/**
@@ -1161,7 +1207,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	    }
 
 	    if (!Tienda::getInstance()->get('checkTableProductsNetsuiteImporter', '0')) {
-	    	$sql = "ALTER TABLE `#__tienda_products`  ADD `amritasingh_measurements` VARCHAR(255) NOT NULL,  ADD `amritasingh_necklace_closure` VARCHAR(255) NOT NULL, ADD `amritasingh_product_type` VARCHAR(255) NOT NULL";
+	    	$sql = "ALTER TABLE `#__tienda_products`  ADD `amritasingh_measurements` VARCHAR(255) NOT NULL,  ADD `amritasingh_necklace_closure` VARCHAR(255) NOT NULL, ADD `amritasingh_product_type` VARCHAR(255) NOT NULL, ADD `amritasingh_product_thumb_image` VARCHAR(255) NOT NULL";
 								
 	        $db = JFactory::getDBO();
 	        $db->setQuery($sql);
