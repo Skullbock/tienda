@@ -34,12 +34,16 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'image',
 		'currency',
 		'description',
+	    'stock_description',
 		'other_image',
 		'necklace_closure',
 		'earring_closure',
 		'dimensions',
 		'color',
-		'size'
+		'size',
+        'closure',
+        'color_dual_tone',
+        'plating'
 	);
 
 	function __construct(&$subject, $config) {
@@ -283,7 +287,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 
 		$description = $record->get('description', '');
 		if ($description != '') {
-			$data['product_description']	= array($category);
+			$data['product_description']	= $description;
 		}
 
 
