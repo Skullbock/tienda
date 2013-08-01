@@ -340,11 +340,11 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		    $data['amritasingh_closure'] = $closure;
 		}		
 		
-		$data['product_enabled'] = 1;
+		$data['product_enabled'] = 0;
 		$display_in_website = $record->get('display_in_website', '');
 		if ($display_in_website  != '') {
-		    if (strtolower($display_in_website) == 'no') {
-		        $data['product_enabled'] = 0;
+		    if (strtolower($display_in_website) == 'yes') {
+		        $data['product_enabled'] = 1;
 		    }
 		}		
 
