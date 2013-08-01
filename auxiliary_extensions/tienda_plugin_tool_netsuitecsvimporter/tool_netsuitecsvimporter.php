@@ -25,17 +25,21 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'netsuite_id',
 		'name',
 		'display_name',
+	    'last_modified_in_netsuite',
 		'category',
 		'parent_category',
 		'parent',
 		'type',
 		'price',
+	    'base_price',
+	    'other_price',
 		'quantity',
 		'image',
 		'currency',
 		'description',
 	    'stock_description',
 		'other_image',
+	    'product_material',
 		'necklace_closure',
 		'earring_closure',
 		'dimensions',
@@ -43,7 +47,8 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'size',
         'closure',
         'color_dual_tone',
-        'plating'
+        'plating',
+	    'display_in_website'
 	);
 
 	function __construct(&$subject, $config) {
