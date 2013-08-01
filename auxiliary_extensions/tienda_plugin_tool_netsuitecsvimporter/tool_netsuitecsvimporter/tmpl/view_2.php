@@ -3,7 +3,7 @@
 <?php $header = @$vars->header; ?>
 
 <div class="note_green">
-	<table>
+	<table class="table table-striped">
 		<thead>
 		<tr>
 			 <?php foreach($header as $h): ?>
