@@ -44,7 +44,6 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'dimensions',
 		'color',
 		'size',
-        'closure',
         'color_dual_tone',
         'plating',
 	    'display_in_website'
@@ -335,11 +334,6 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		    $data['amritasingh_product_material'] = $product_material;
 		}
 
-		$closure = $record->get('closure', '');
-		if ($closure  != '') {
-		    $data['amritasingh_closure'] = $closure;
-		}		
-		
 		$data['product_enabled'] = 0;
 		$display_in_website = $record->get('display_in_website', '');
 		if ($display_in_website  != '') {
@@ -702,7 +696,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	{
 		$model = JModel::getInstance('Products', 'TiendaModel');
 
-		$attributes = array('color' => 'Color', 'size' => 'Size', 'earring_closure' => 'Earring Closure');
+		$attributes = array('color' => 'Color', 'size' => 'Size', 'closure' => 'Earring Closure');
 		$options = array();
 
 		foreach ($attributes as $key => $attribute) {
