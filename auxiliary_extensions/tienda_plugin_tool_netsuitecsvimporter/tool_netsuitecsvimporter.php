@@ -26,13 +26,12 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'name',
 		'display_name',
 	    'last_modified_in_netsuite',
-		'category',
-		'parent_category',
+		'category', // class
+		'parent_category', // department
 		'parent',
 		'type',
-		'price',
+		'price', // online_price
 	    'base_price',
-	    'other_price',
 		'quantity',
 		'image',
 		'currency',
