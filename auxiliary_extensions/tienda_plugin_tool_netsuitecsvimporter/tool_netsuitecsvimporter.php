@@ -319,7 +319,10 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$type = $record->get('type', '');
 		if ($type  != '') {
 			$data['amritasingh_product_type'] = $type;
-		} 
+		}
+
+		// all Amrita Singh products ship
+		$data['product_ships'] = 1;
 
 		return $data;
 	}
