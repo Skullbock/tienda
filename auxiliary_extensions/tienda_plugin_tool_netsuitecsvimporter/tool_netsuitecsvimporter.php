@@ -319,11 +319,34 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		if ($necklace_closure  != '') {
 			$data['amritasingh_necklace_closure'] = $necklace_closure;
 		}
+		
+		$plating = $record->get('plating', '');
+		if ($plating  != '') {
+		    $data['amritasingh_product_plating'] = $plating;
+		}
 
 		$type = $record->get('type', '');
 		if ($type  != '') {
 			$data['amritasingh_product_type'] = $type;
 		}
+		
+		$product_material = $record->get('product_material', '');
+		if ($product_material  != '') {
+		    $data['amritasingh_product_material'] = $product_material;
+		}
+
+		$closure = $record->get('closure', '');
+		if ($closure  != '') {
+		    $data['amritasingh_closure'] = $closure;
+		}		
+		
+		$data['product_enabled'] = 1;
+		$display_in_website = $record->get('display_in_website', '');
+		if ($display_in_website  != '') {
+		    if (strtolower($display_in_website) == 'no') {
+		        $data['product_enabled'] = 0;
+		    }
+		}		
 
 		// all Amrita Singh products ship
 		$data['product_ships'] = 1;
@@ -518,6 +541,17 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		// else use the save() method
 		else {
 			$product->load($product_id);
+			
+			// UPDATES must not overwrite these properties:
+			// name/title
+			// description
+			// pricing
+			// product_enabled
+			
+			unset($data['product_name']);
+			unset($data['product_description']);
+			unset($data['product_enabled']);
+			
 			$product -> bind($data);
 
 			//check if normal price exists
@@ -540,12 +574,16 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 					}
 					// Overwrite price
 					else {
+					    /*
+					     * UPDATES should no longer overwrite prices in Tienda
+					     * 
 						// set price if new or no prices set
 						$price = JTable::getInstance('Productprices', 'TiendaTable');
 						$price -> load($prices[0] -> product_price_id);
 						$price -> product_price = $data['product_price'];
 						$price -> group_id = Tienda::getInstance() -> get('default_user_group', '1');
 						$price -> save();
+						*/
 					}
 				}
 
