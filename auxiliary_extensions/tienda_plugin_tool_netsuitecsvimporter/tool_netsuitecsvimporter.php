@@ -842,6 +842,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		$state -> file = '';
 		$state -> uploaded_file = isset($this->uploaded_file) ? $this->uploaded_file : '';
 		$state -> skip_first = 0;
+		$state -> start = 0;
 
 		foreach ($state->getProperties() as $key => $value) {
 			$new_value = JRequest::getVar($key);

@@ -37,7 +37,19 @@
                     
                     </td>
                 </tr>
-                  <tr>
+                <tr>
+                    <td width="100" align="right" class="key">
+                        <?php echo JText::_('COM_TIENDA_RECORD_TO_START_WITH'); ?>?:
+                    </td>
+                    <td>
+                    	<?php echo (int) @$state->start; ?>
+                        <input type="hidden" name="start" id="start" value="<?php echo @$state->start; ?>" />
+                    </td>
+                    <td>
+                    
+                    </td>
+                </tr>                
+                <tr>
                     <td width="100" align="right" class="key">
                         <?php echo JText::_('Total Records') ; ?>?:
                     </td>

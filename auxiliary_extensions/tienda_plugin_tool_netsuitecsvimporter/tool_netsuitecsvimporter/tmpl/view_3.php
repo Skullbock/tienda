@@ -62,6 +62,6 @@ tiendaJQ(document).ready(function($){
         });
     }
 
-    migrate(0);
+    migrate(<?php echo (int) @$vars->state->start; ?>);
 });
 </script>

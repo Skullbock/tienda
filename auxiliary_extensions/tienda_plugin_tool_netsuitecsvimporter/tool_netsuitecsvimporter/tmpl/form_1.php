@@ -35,6 +35,17 @@
                     
                     </td>
                 </tr>
+                <tr>
+                    <td width="100" align="right" class="key">
+                        <?php echo JText::_('COM_TIENDA_RECORD_TO_START_WITH'); ?>?:
+                    </td>
+                    <td>
+                        <input type="text" name="start" id="start" value="0" />
+                    </td>
+                    <td>
+                    
+                    </td>
+                </tr>                
             </table>    
     <br />
     * <?php echo JText::_('COM_TIENDA_INDICATES_A_REQUIRED_FIELD'); ?>
