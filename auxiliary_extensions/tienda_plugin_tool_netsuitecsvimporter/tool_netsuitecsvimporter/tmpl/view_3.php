@@ -22,7 +22,7 @@ tiendaJQ(document).ready(function($){
     var url = 'index.php?option=com_tienda&controller=tools&task=doTaskAjax&element=tool_netsuitecsvimporter.tienda&elementTask=ajaxImport&format=raw'
     var logs = 'index.php?option=com_tienda&controller=tools&task=doTaskAjax&element=tool_netsuitecsvimporter.tienda&elementTask=getLogs&format=raw'
 
-    var done = 0;
+    var done = <?php echo (int) @$vars->state->start; ?>;
     function migrate(start) {
         if (!start) {
             start = 0;
