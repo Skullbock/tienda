@@ -696,7 +696,7 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 	{
 		$model = JModel::getInstance('Products', 'TiendaModel');
 
-		$attributes = array('color' => 'Color', 'size' => 'Size', 'closure' => 'Earring Closure');
+		$attributes = array('color' => 'Color', 'size' => 'Size', 'earring_closure' => 'Earring Closure');
 		$options = array();
 
 		foreach ($attributes as $key => $attribute) {
