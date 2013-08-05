@@ -299,6 +299,11 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$data['product_price'] 		= $price;
 		}
 
+		$special_price = $record->get('base_price', '');
+		if ($special_price != '') {
+			$data['special_price'] 			= $special_price;
+		}
+
 		$image = $record->get('image', '');
 		if ($image != '') {
 			$data['product_full_image']	= $image;
@@ -599,6 +604,18 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 						$quantity -> quantity = $data['product_quantity'];
 						$quantity -> save();
 					}
+				}
+
+				// Special price for wholesale group
+				if (isset($data['special_price'])) {
+					$price = JTable::getInstance('Productprices', 'TiendaTable');
+					$keys = array('product_id' => $product->id, 'group_id' => 2);
+
+					$price->load($keys);
+					$price -> product_id = $product -> id;
+					$price -> product_price = $data['special_price'];
+					$price -> group_id = 2;
+					$price -> save();
 				}
 
 			} else {
