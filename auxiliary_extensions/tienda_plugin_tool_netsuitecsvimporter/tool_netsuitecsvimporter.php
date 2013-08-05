@@ -31,7 +31,9 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 		'parent',
 		'type',
 		'price', // online_price
-	    'base_price',
+	    'wholesale_price',
+	    'list_price',
+	    'current_web_price',
 		'quantity',
 		'image',
 		'currency',
@@ -299,7 +301,13 @@ class plgTiendaTool_NetsuiteCsvImporter extends TiendaToolPlugin {
 			$data['product_price'] 		= $price;
 		}
 
-		$special_price = $record->get('base_price', '');
+		$list_price = $record->get('list_price', '');
+		if ($list_price != '') {
+			$data['product_listprice'] 			= $list_price;
+			$data['product_listprice_enabled']  = 1;
+		}
+
+		$special_price = $record->get('wholesale_price', '');
 		if ($special_price != '') {
 			$data['special_price'] 			= $special_price;
 		}
